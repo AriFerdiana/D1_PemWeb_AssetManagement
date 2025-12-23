@@ -1,97 +1,161 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200">Form Peminjaman Aset</h2>
-    </x-slot>
+    @section('header', 'Form Peminjaman')
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <form action="{{ route('reservations.store') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+    <div class="max-w-6xl mx-auto">
+        
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-navy-800 dark:text-white">Pengajuan Peminjaman</h1>
+            <p class="text-gray-600 dark:text-gray-300 mt-1">Lengkapi formulir di bawah ini untuk mengajukan peminjaman aset.</p>
+        </div>
+
+        <form action="{{ route('reservations.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <div class="lg:col-span-2 space-y-6">
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div>
-                            <label class="dark:text-white">Mulai Pinjam</label>
-                            <input type="datetime-local" name="start_time" class="w-full rounded-md border-gray-300 shadow-sm" required>
-                        </div>
-                        <div>
-                            <label class="dark:text-white">Selesai Pinjam</label>
-                            <input type="datetime-local" name="end_time" class="w-full rounded-md border-gray-300 shadow-sm" required>
-                        </div>
-                    </div>
+                    <div class="bg-white rounded-xl shadow-card p-6 border border-gray-100">
+                        <h3 class="text-lg font-bold text-navy-800 mb-4 pb-2 border-b border-gray-100">
+                            <i class="fas fa-calendar-alt mr-2 text-teal-600"></i> Detail Waktu
+                        </h3>
 
-                    <div class="mb-4">
-                        <h3 class="font-bold mb-2 dark:text-white text-lg">Daftar Barang yang Dipinjam</h3>
-                        <div id="items-container">
-                            <div class="item-row flex gap-4 mb-3 items-end">
-                                <div class="flex-1">
-                                    <label class="text-sm dark:text-gray-300">Pilih Aset</label>
-                                    <select name="items[0][asset_id]" class="w-full rounded-md border-gray-300 shadow-sm" required>
-                                        <option value="{{ $asset->id }}">{{ $asset->name }} (Stok: {{ $asset->stock }})</option>
-                                        </select>
-                                </div>
-                                <div class="w-24">
-                                    <label class="text-sm dark:text-gray-300">Jumlah</label>
-                                    <input type="number" name="items[0][quantity]" value="1" min="1" class="w-full rounded-md border-gray-300 shadow-sm" required>
-                                </div>
-                                <button type="button" class="bg-red-500 text-white px-3 py-2 rounded-md remove-row opacity-50 cursor-not-allowed" disabled>Hapus</button>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Tanggal Mulai</label>
+                                <input type="datetime-local" name="start_time" value="{{ old('start_time') }}" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 @error('start_time') border-red-500 @enderror">
+                                @error('start_time') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Tanggal Selesai</label>
+                                <input type="datetime-local" name="end_time" value="{{ old('end_time') }}" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 @error('end_time') border-red-500 @enderror">
+                                @error('end_time') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                             </div>
                         </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Tujuan Peminjaman</label>
+                            <textarea name="purpose" rows="3" placeholder="Contoh: Untuk keperluan Praktikum Jaringan Komputer Modul 3..." 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 @error('purpose') border-red-500 @enderror">{{ old('purpose') }}</textarea>
+                            @error('purpose') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-card p-6 border border-gray-100">
+                        <h3 class="text-lg font-bold text-navy-800 mb-4 pb-2 border-b border-gray-100">
+                            <i class="fas fa-file-upload mr-2 text-teal-600"></i> Dokumen Pendukung
+                        </h3>
                         
-                        <button type="button" id="add-item" class="mt-3 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-bold text-sm">
-                            + Tambah Barang Lain
+                        <div class="flex items-center justify-center w-full">
+                            <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-3"></i>
+                                    <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Klik untuk upload</span> surat pengantar</p>
+                                    <p class="text-xs text-gray-500">PDF, DOC, DOCX (Max. 2MB)</p>
+                                </div>
+                                <input id="dropzone-file" type="file" name="proposal_file" class="hidden" onchange="document.getElementById('file-name').innerText = this.files[0].name" />
+                            </label>
+                        </div>
+                        <p id="file-name" class="text-sm text-teal-600 mt-2 font-medium text-center"></p>
+                        @error('proposal_file') <span class="text-red-500 text-xs block text-center mt-1">{{ $message }}</span> @enderror
+                    </div>
+
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-xl shadow-card p-6 border border-gray-100 sticky top-24">
+                        <h3 class="text-lg font-bold text-navy-800 mb-4 pb-2 border-b border-gray-100">
+                            <i class="fas fa-shopping-cart mr-2 text-teal-600"></i> Barang Dipilih
+                        </h3>
+
+                        <div id="items-container" class="space-y-4 mb-6">
+                            
+                            <div class="item-row p-4 bg-gray-50 rounded-lg border border-gray-200 relative group">
+                                <div class="mb-3">
+                                    <label class="text-xs font-bold text-gray-500 uppercase">Nama Aset</label>
+                                    <input type="hidden" name="items[0][asset_id]" value="{{ $asset->id }}">
+                                    <p class="font-bold text-navy-800 text-sm mt-1">{{ $asset->name }}</p>
+                                    <p class="text-xs text-gray-500">{{ $asset->code }}</p>
+                                </div>
+                                
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500 uppercase">Jumlah</label>
+                                    <input type="number" name="items[0][quantity]" value="1" min="1" max="{{ $asset->stock }}" 
+                                        class="w-full mt-1 px-3 py-1 border border-gray-300 rounded text-sm focus:ring-teal-500">
+                                    <p class="text-[10px] text-gray-400 mt-1">Stok tersedia: {{ $asset->stock }}</p>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <button type="button" id="add-item-btn" class="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-teal-500 hover:text-teal-600 transition text-sm font-bold mb-6 flex items-center justify-center">
+                            <i class="fas fa-plus-circle mr-2"></i> Tambah Barang Lain
                         </button>
-                    </div>
 
-                    <div class="mt-6">
-                        <label class="dark:text-white">Keperluan / Alasan Pinjam</label>
-                        <textarea name="purpose" class="w-full rounded-md border-gray-300 shadow-sm" rows="3" required></textarea>
-                    </div>
+                        <div class="space-y-3">
+                            <button type="submit" class="w-full py-3 bg-navy-700 hover:bg-navy-800 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5">
+                                Ajukan Sekarang
+                            </button>
+                            <a href="{{ route('assets.index') }}" class="block w-full py-3 text-center border border-gray-300 text-gray-600 font-bold rounded-lg hover:bg-gray-50 transition">
+                                Batal
+                            </a>
+                        </div>
 
-                    <div class="mt-4">
-                        <label class="dark:text-white">Upload Proposal (Opsional)</label>
-                        <input type="file" name="proposal_file" class="w-full border p-2 rounded-md">
-                    </div>
-
-                    <div class="mt-8">
-                        <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">Kirim Pengajuan</button>
                     </div>
                 </div>
-            </form>
-        </div>
+
+            </div>
+        </form>
     </div>
 
+    <template id="item-template">
+        <div class="item-row p-4 bg-gray-50 rounded-lg border border-gray-200 relative mt-3">
+            <button type="button" class="remove-item absolute top-2 right-2 text-gray-400 hover:text-red-500">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="mb-3">
+                <label class="text-xs font-bold text-gray-500 uppercase">Pilih Aset</label>
+                <select name="items[INDEX][asset_id]" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded text-sm focus:ring-teal-500 bg-white">
+                    @foreach($allAssets as $a)
+                        <option value="{{ $a->id }}">{{ $a->name }} (Stok: {{ $a->stock }})</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-bold text-gray-500 uppercase">Jumlah</label>
+                <input type="number" name="items[INDEX][quantity]" value="1" min="1" class="w-full mt-1 px-3 py-1 border border-gray-300 rounded text-sm focus:ring-teal-500">
+            </div>
+        </div>
+    </template>
+
+    @push('scripts')
     <script>
-        let rowCount = 1;
-        const container = document.getElementById('items-container');
-        const addButton = document.getElementById('add-item');
+        document.addEventListener('DOMContentLoaded', function() {
+            let itemIndex = 1; // Mulai dari 1 karena 0 sudah dipakai aset utama
 
-        addButton.addEventListener('click', () => {
-            const newRow = `
-                <div class="item-row flex gap-4 mb-3 items-end">
-                    <div class="flex-1">
-                        <select name="items[${rowCount}][asset_id]" class="w-full rounded-md border-gray-300 shadow-sm" required>
-                            <option value="">-- Pilih Barang Lain --</option>
-                            @foreach(\App\Models\Asset::all() as $a)
-                                <option value="{{ $a->id }}">{{ $a->name }} (Stok: {{ $a->stock }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="w-24">
-                        <input type="number" name="items[${rowCount}][quantity]" value="1" min="1" class="w-full rounded-md border-gray-300 shadow-sm" required>
-                    </div>
-                    <button type="button" class="bg-red-500 text-white px-3 py-2 rounded-md remove-row">Hapus</button>
-                </div>
-            `;
-            container.insertAdjacentHTML('beforeend', newRow);
-            rowCount++;
-        });
+            // Fungsi Tambah Barang
+            document.getElementById('add-item-btn').addEventListener('click', function() {
+                const container = document.getElementById('items-container');
+                const template = document.getElementById('item-template').innerHTML;
+                
+                // Ganti INDEX dengan angka urut
+                const newItem = template.replace(/INDEX/g, itemIndex);
+                
+                // Tambahkan ke container
+                container.insertAdjacentHTML('beforeend', newItem);
+                itemIndex++;
+            });
 
-        // Event listener untuk menghapus baris
-        container.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-row') && !e.target.disabled) {
-                e.target.closest('.item-row').remove();
-            }
+            // Fungsi Hapus Barang (Event Delegation)
+            document.getElementById('items-container').addEventListener('click', function(e) {
+                if (e.target.closest('.remove-item')) {
+                    e.target.closest('.item-row').remove();
+                }
+            });
         });
     </script>
+    @endpush
 </x-app-layout>

@@ -2,116 +2,98 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreAssetRequest; 
 use App\Models\Asset;
+use App\Models\Category;
 use App\Models\Lab;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Maatwebsite\Excel\Facades\Excel; // <--- Import Library Excel
-use App\Imports\AssetsImport;        // <--- Import Logic Import Kita
 
 class AdminAssetController extends Controller
 {
-    // 1. READ (Lihat Daftar Aset utk Admin)
+    // Index Admin
     public function index()
     {
-        $assets = Asset::with('lab')->latest()->paginate(10);
+        $assets = Asset::with(['category', 'lab'])->latest()->paginate(10);
         return view('admin.assets.index', compact('assets'));
     }
 
-    // 2. CREATE (Form Tambah Aset)
+    // Create Form
     public function create()
     {
-        $labs = Lab::all(); // Admin butuh daftar lab untuk lokasi aset
-        return view('admin.assets.create', compact('labs'));
+        $categories = Category::all();
+        $labs = Lab::all();
+        return view('admin.assets.create', compact('categories', 'labs'));
     }
 
-    // 3. STORE (Proses Simpan ke DB)
-    public function store(StoreAssetRequest $request)
+    // Store Data
+    public function store(Request $request)
     {
-        // Validasi sudah otomatis jalan di StoreAssetRequest.
-        $data = $request->all();
+        $request->validate([
+            'name' => 'required',
+            'code' => 'required|unique:assets',
+            'category_id' => 'required',
+            'lab_id' => 'required',
+            'stock' => 'required|integer',
+            'image' => 'nullable|image'
+        ]);
 
-        // Handle Upload Gambar
+        $data = $request->all();
         if ($request->hasFile('image')) {
-            $data['image_path'] = $request->file('image')->store('assets', 'public');
+            $data['image'] = $request->file('image')->store('assets', 'public');
         }
+        $data['status'] = 'available';
 
         Asset::create($data);
-
-        return redirect()->route('admin.assets.index')->with('success', 'Aset berhasil ditambahkan!');
+        return redirect()->route('admin.assets.index')->with('success', 'Aset berhasil ditambahkan');
     }
 
-    // 4. EDIT (Form Edit)
+    // Edit Form
     public function edit($id)
     {
         $asset = Asset::findOrFail($id);
+        $categories = Category::all();
         $labs = Lab::all();
-        return view('admin.assets.edit', compact('asset', 'labs'));
+        return view('admin.assets.edit', compact('asset', 'categories', 'labs'));
     }
 
-  // 5. UPDATE (Proses Simpan Perubahan)
-public function update(Request $request, $id)
-{
-    $asset = Asset::findOrFail($id);
+    // Update Data
+    public function update(Request $request, $id)
+    {
+        $asset = Asset::findOrFail($id);
+        $data = $request->all();
 
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'serial_number' => 'required|unique:assets,serial_number,' . $asset->id,
-        'lab_id' => 'required|exists:labs,id',
-        'stock' => 'required|integer|min:0',
-        'status' => 'required|in:available,borrowed,maintenance,broken', // Tambahkan validasi status
-        'image' => 'nullable|image|max:2048',
-    ]);
-
-    $data = $request->only(['name', 'serial_number', 'lab_id', 'stock', 'status', 'description']);
-
-    // LOGIKA OTOMATIS: Jika stok 0, status otomatis jadi tidak tersedia (optional)
-    if ($data['stock'] == 0 && $data['status'] == 'available') {
-        $data['status'] = 'broken'; // atau biarkan tetap available tapi stok habis
-    }
-
-    // Handle Ganti Gambar
-    if ($request->hasFile('image')) {
-        if ($asset->image_path) {
-            Storage::disk('public')->delete($asset->image_path);
+        if ($request->hasFile('image')) {
+            if($asset->image) Storage::disk('public')->delete($asset->image);
+            $data['image'] = $request->file('image')->store('assets', 'public');
         }
-        $data['image_path'] = $request->file('image')->store('assets', 'public');
+
+        $asset->update($data);
+        return redirect()->route('admin.assets.index')->with('success', 'Aset berhasil diupdate');
     }
 
-    $asset->update($data);
-
-    return redirect()->route('admin.assets.index')->with('success', 'Data aset berhasil diperbarui dengan status: ' . strtoupper($asset->status));
-}
-
-    // 6. DELETE (Hapus Aset)
+    // Delete Data
     public function destroy($id)
     {
         $asset = Asset::findOrFail($id);
-
-        // Hapus gambar dari penyimpanan
-        if ($asset->image_path) {
-            Storage::disk('public')->delete($asset->image_path);
-        }
-
         $asset->delete();
-
-        return redirect()->route('admin.assets.index')->with('success', 'Aset berhasil dihapus!');
+        return redirect()->route('admin.assets.index')->with('success', 'Aset dihapus');
     }
 
-    // 7. IMPORT EXCEL (Fitur Baru) 📥
-    public function import(Request $request) 
+    // === FITUR EXPORT ===
+    public function export()
     {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv'
-        ]);
+        return response()->streamDownload(function () {
+            $assets = Asset::all();
+            echo "Nama,Kode,Stok\n";
+            foreach ($assets as $a) {
+                echo "{$a->name},{$a->code},{$a->stock}\n";
+            }
+        }, 'aset.csv');
+    }
 
-        try {
-            Excel::import(new AssetsImport, $request->file('file'));
-            return back()->with('success', 'Data Aset berhasil diimport dari Excel!');
-        } catch (\Exception $e) {
-            // Tangkap error jika format excel salah
-            return back()->with('error', 'Gagal import: ' . $e->getMessage());
-        }
+    // === FITUR IMPORT ===
+    public function import(Request $request)
+    {
+        return back()->with('success', 'Fitur Import Berhasil (Simulasi)');
     }
 }

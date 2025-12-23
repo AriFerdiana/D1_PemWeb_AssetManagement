@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,15 +27,28 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+    $request->user()->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+    // === LOGIKA UPLOAD FOTO ===
+    if ($request->hasFile('avatar')) {
+        // 1. Hapus foto lama jika ada (agar tidak menuh-menuhin server)
+        if ($request->user()->avatar && Storage::disk('public')->exists($request->user()->avatar)) {
+            Storage::disk('public')->delete($request->user()->avatar);
         }
 
-        $request->user()->save();
+        // 2. Simpan foto baru
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $request->user()->avatar = $path;
+    }
+    // ==========================
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+    if ($request->user()->isDirty('email')) {
+        $request->user()->email_verified_at = null;
+    }
+
+    $request->user()->save();
+
+    return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
     /**

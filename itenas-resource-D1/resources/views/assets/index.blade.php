@@ -1,82 +1,135 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                {{ __('Katalog Aset & Fasilitas') }}
-            </h2>
-        </div>
-    </x-slot>
+    @section('header', 'Katalog Aset')
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        
+        <div>
+            <h3 class="text-2xl font-bold text-navy-800 dark:text-white">Daftar Alat & Fasilitas</h3>
+            <p class="text-gray-600 dark:text-gray-300 text-sm">Cari dan pinjam aset untuk keperluan praktikum/kegiatan.</p>
+        </div>
+
+        <form method="GET" action="{{ route('assets.index') }}" class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
             
-            <div class="mb-6">
-                <form action="{{ route('assets.index') }}" method="GET">
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                        </div>
-                        <input type="text" name="search" value="{{ request('search') }}" 
-                            class="block w-full p-4 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" 
-                            placeholder="Cari nama alat, gedung, atau prodi (Contoh: 'Oscilloscope' atau 'Informatika')...">
-                        <button type="submit" class="text-white absolute right-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2">Cari</button>
-                    </div>
-                </form>
+            <div class="relative group">
+                <input 
+                    type="text" 
+                    name="search" 
+                    value="{{ request('search') }}"
+                    placeholder="Cari nama alat / kode..." 
+                    class="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent w-full md:w-64 bg-white shadow-sm transition-all group-hover:border-teal-400"
+                >
+                <i class="fas fa-search absolute left-3 top-3.5 text-gray-400 group-hover:text-teal-500 transition-colors"></i>
             </div>
 
-            @if($assets->count() > 0)
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    @foreach($assets as $asset)
-                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition duration-300 overflow-hidden border border-gray-100 dark:border-gray-700">
-                            <div class="h-40 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                                @if($asset->image_path && $asset->image_path != 'assets/dummy.jpg')
-                                    <img src="{{ asset('storage/' . $asset->image_path) }}" alt="{{ $asset->name }}" class="h-full w-full object-cover">
-                                @else
-                                    <span class="text-4xl">🛠️</span>
-                                @endif
-                            </div>
-                            
-                            <div class="p-5">
-                                <span class="bg-indigo-100 text-indigo-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-900 dark:text-indigo-300">
-                                    {{ $asset->lab->prodi->code ?? 'UMUM' }}
-                                </span>
+            <select name="category_id" class="border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white shadow-sm text-gray-700 cursor-pointer">
+                <option value="">Semua Kategori</option>
+                @foreach($categories as $cat)
+                    <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>
+                        {{ $cat->name }}
+                    </option>
+                @endforeach
+            </select>
 
-                                <h5 class="mb-2 text-lg font-bold tracking-tight text-gray-900 dark:text-white truncate">
-                                    {{ $asset->name }}
-                                </h5>
-                                
-                                <p class="mb-3 font-normal text-sm text-gray-700 dark:text-gray-400">
-                                    <span class="block">📍 {{ $asset->lab->building_name }} - {{ $asset->lab->name }}</span>
-                                    <span class="block mt-1">📦 Stok: {{ $asset->stock }} Unit</span>
-                                </p>
+            <button type="submit" class="bg-navy-700 hover:bg-navy-800 text-white px-5 py-2.5 rounded-lg flex items-center justify-center shadow-md transition-all transform active:scale-95">
+                <i class="fas fa-filter mr-2"></i> Filter
+            </button>
 
-                                <div class="flex justify-between items-center mt-4">
-                                    <span class="text-sm font-semibold {{ $asset->rental_price > 0 ? 'text-orange-600' : 'text-green-600' }}">
-                                        {{ $asset->rental_price > 0 ? 'Rp '.number_format($asset->rental_price) : 'Gratis' }}
-                                    </span>
-                                    
-                                    <a href="{{ route('reservations.create', $asset->id) }}" class="inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300">
-                                        Pinjam
-                                        <svg class="w-3.5 h-3.5 ml-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
-                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
-                                        </svg>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-
-                <div class="mt-6">
-                    {{ $assets->links() }}
-                </div>
-            @else
-                <div class="text-center py-10">
-                    <p class="text-gray-500 text-lg">Aset yang kamu cari tidak ditemukan 😔</p>
-                    <a href="{{ route('assets.index') }}" class="text-blue-600 hover:underline">Reset Pencarian</a>
-                </div>
+            @if(request()->has('search') || request()->has('category_id'))
+                <a href="{{ route('assets.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2.5 rounded-lg flex items-center justify-center transition" title="Reset Filter">
+                    <i class="fas fa-undo"></i>
+                </a>
             @endif
 
-        </div>
+            @role('Superadmin|Laboran')
+            <a href="{{ route('admin.assets.create') }}" class="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-lg flex items-center justify-center shadow-md ml-0 md:ml-2 transition-all transform hover:-translate-y-0.5">
+                <i class="fas fa-plus mr-2"></i> Tambah
+            </a>
+            @endrole
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+        @forelse($assets as $asset)
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all duration-300 flex flex-col h-full group">
+                
+                <div class="h-1.5 w-full bg-gradient-to-r 
+                    {{ $asset->category_id % 2 == 0 ? 'from-teal-500 to-blue-500' : 'from-purple-500 to-pink-500' }}">
+                </div>
+
+                <div class="p-5 flex-grow">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                            @if($asset->image)
+                                <img src="{{ asset('storage/' . $asset->image) }}" class="w-10 h-10 object-cover rounded-md">
+                            @else
+                                <i class="fas fa-cube text-navy-600 dark:text-teal-400 text-2xl"></i>
+                            @endif
+                        </div>
+
+                        @if($asset->status == 'available')
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
+                                Tersedia
+                            </span>
+                        @elseif($asset->status == 'maintenance')
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-200">
+                                Perbaikan
+                            </span>
+                        @else
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                                Dipinjam
+                            </span>
+                        @endif
+                    </div>
+
+                    <h4 class="text-lg font-bold text-navy-900 dark:text-white mb-1 line-clamp-1" title="{{ $asset->name }}">
+                        {{ $asset->name }}
+                    </h4>
+                    <p class="text-gray-500 text-xs mb-4 line-clamp-2 min-h-[2.5em]">
+                        {{ $asset->description ?? 'Tidak ada deskripsi aset.' }}
+                    </p>
+
+                    <div class="grid grid-cols-2 gap-2 text-xs bg-gray-50 dark:bg-gray-700/30 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                        <div>
+                            <p class="text-gray-400">Kode Aset</p>
+                            <p class="font-semibold text-navy-700 dark:text-gray-200 truncate">{{ $asset->code }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400">Lokasi</p>
+                            <p class="font-semibold text-navy-700 dark:text-gray-200 truncate" title="{{ $asset->lab->name ?? 'Umum' }}">
+                                {{ \Illuminate\Support\Str::limit($asset->lab->name ?? 'Umum', 12) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-5 pb-5 pt-0 mt-auto">
+                    @if($asset->status == 'available')
+                        <a href="{{ route('reservations.create', $asset->id) }}" 
+                           class="w-full py-2.5 bg-white border border-teal-500 text-teal-600 text-sm font-bold rounded-lg hover:bg-teal-600 hover:text-white transition-colors duration-300 flex items-center justify-center gap-2 group-hover:shadow-md">
+                            <i class="fas fa-shopping-cart"></i> Pinjam Sekarang
+                        </a>
+                    @else
+                        <button disabled class="w-full py-2.5 bg-gray-100 text-gray-400 text-sm font-bold rounded-lg cursor-not-allowed flex items-center justify-center gap-2 border border-gray-200">
+                            <i class="fas fa-lock"></i> Tidak Tersedia
+                        </button>
+                    @endif
+                </div>
+            </div>
+        @empty
+            <div class="col-span-full py-16 text-center bg-white rounded-xl border border-dashed border-gray-300">
+                <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-search text-3xl text-gray-400"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-800">Aset tidak ditemukan</h3>
+                <p class="text-gray-500 text-sm mt-1">Coba ubah kata kunci pencarian atau filter kategori.</p>
+                <a href="{{ route('assets.index') }}" class="mt-4 inline-block text-teal-600 font-semibold hover:underline">
+                    Reset Pencarian
+                </a>
+            </div>
+        @endforelse
+    </div>
+
+    <div class="mt-8">
+        {{ $assets->withQueryString()->links() }}
     </div>
 </x-app-layout>

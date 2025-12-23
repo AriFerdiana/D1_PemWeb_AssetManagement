@@ -1,6 +1,5 @@
 <?php
 
-// Perbaikan Import
 use App\Http\Controllers\Auth\SocialiteController; 
 use App\Http\Controllers\AdminAssetController;
 use App\Http\Controllers\DashboardController;
@@ -26,11 +25,11 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-// Route Social Login Dinamis (Google & GitHub)
+// Route Social Login
 Route::get('auth/{provider}', [SocialiteController::class, 'redirectToProvider'])->name('social.login');
 Route::get('auth/{provider}/callback', [SocialiteController::class, 'handleProviderCallback']);
 
-// GROUP ROUTE YANG PERLU LOGIN (AUTH)
+// === GROUP 1: ROUTE MAHASISWA / UMUM ===
 Route::middleware('auth')->group(function () {
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -57,25 +56,33 @@ Route::middleware('auth')->group(function () {
     Route::post('/rooms/book', [RoomController::class, 'store'])->name('rooms.store');
 }); 
 
-// GROUP ROUTE KHUSUS ADMIN
+// === GROUP 2: ROUTE KHUSUS ADMIN (SUPERADMIN/LABORAN) ===
+
+// A. Route Export/Import (Ditaruh diluar grup 'admin.' agar nama route 'assets.export' terbaca benar)
+Route::middleware(['auth', 'role:Superadmin|Laboran'])->prefix('admin')->group(function () {
+    Route::get('assets/export', [AdminAssetController::class, 'export'])->name('assets.export');
+    Route::post('assets/import', [AdminAssetController::class, 'import'])->name('assets.import');
+});
+
+// B. Route Resource Admin (Otomatis pakai nama 'admin.')
 Route::middleware(['auth', 'role:Superadmin|Laboran'])->prefix('admin')->name('admin.')->group(function () {
     
     // CRUD Assets
     Route::resource('assets', AdminAssetController::class);
     
-    // IMPORT EXCEL
-    Route::post('assets/import', [AdminAssetController::class, 'import'])->name('assets.import');
-
     // --- FITUR SCANNER QR CODE, DENDA & LAPORAN ---
     Route::get('/scan', [AdminReservationController::class, 'scanIndex'])->name('scan.index');
     Route::post('/scan/process', [AdminReservationController::class, 'scanProcess'])->name('scan.process');
     Route::patch('/reservations/{id}/pay', [AdminReservationController::class, 'payPenalty'])->name('reservations.pay');
     
-    // RUTE BARU: CETAK LAPORAN PDF
+    // CETAK LAPORAN PDF
     Route::get('/reports/peminjaman-pdf', [AdminReservationController::class, 'exportPDF'])->name('reports.pdf');
 
     // CRUD Master Data Lainnya
-    Route::resource('users', \App\Http\Controllers\AdminUserController::class)->except(['edit', 'update']); 
+    
+    // PERBAIKAN DI SINI: Hapus "->except" agar fitur EDIT USER jalan
+    Route::resource('users', \App\Http\Controllers\AdminUserController::class); 
+    
     Route::resource('labs', \App\Http\Controllers\AdminLabController::class)->except(['edit', 'update']);
     Route::resource('prodis', \App\Http\Controllers\AdminProdiController::class)->except(['edit', 'update']);
     Route::resource('categories', \App\Http\Controllers\AdminCategoryController::class)->except(['edit', 'update']);
