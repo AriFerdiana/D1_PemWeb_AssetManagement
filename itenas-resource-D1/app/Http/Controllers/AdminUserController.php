@@ -16,7 +16,7 @@ class AdminUserController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::with('prodi');
+        $query = User::with(['prodi', 'roles']); // Eager load roles juga
 
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->search . '%')
@@ -47,15 +47,17 @@ class AdminUserController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => ['required'],
-            // Prodi optional kalau admin
-            'prodi_id' => $request->role == 'Mahasiswa' ? 'required' : 'nullable', 
+            'prodi_id' => ['nullable', 'exists:prodis,id'], 
         ]);
+
+        // Logika Prodi: Jika Superadmin, set null. Selain itu ambil dari input.
+        $prodiId = ($request->role === 'Superadmin') ? null : $request->prodi_id;
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'prodi_id' => $request->prodi_id,
+            'prodi_id' => $prodiId,
         ]);
 
         // Assign Role Spatie
@@ -65,35 +67,45 @@ class AdminUserController extends Controller
     }
 
     /**
-     * Form Edit User (INI YANG TADI ERROR KARENA BELUM ADA)
+     * Form Edit User
+     * Menggunakan Route Model Binding (User $user)
      */
-    public function edit($id)
+    public function edit(User $user)
     {
-        $user = User::findOrFail($id);
+        // Tidak perlu findOrFail lagi karena Laravel otomatis mencarikan berdasarkan ID di URL
         $prodis = Prodi::all();
         $roles = Role::all();
+        
         return view('admin.users.edit', compact('user', 'prodis', 'roles'));
     }
 
     /**
-     * Update User (INI JUGA BARU)
+     * Update User
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, User $user)
     {
-        $user = User::findOrFail($id);
-
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email,'.$id],
+            // Ignore email milik user ini sendiri saat cek unique
+            'email' => ['required', 'email', 'unique:users,email,'.$user->id],
             'role' => ['required'],
+            'prodi_id' => ['nullable', 'exists:prodis,id'],
         ]);
 
-        // Update data dasar
+        // 1. Update Data Dasar
         $user->name = $request->name;
         $user->email = $request->email;
-        $user->prodi_id = $request->prodi_id;
 
-        // Update password jika diisi (jika kosong biarkan lama)
+        // 2. Logika Prodi (PENTING)
+        // Jika role yang dipilih adalah Superadmin, hapus prodinya (karena superadmin lintas prodi)
+        // Jika Laboran/Mahasiswa, simpan prodi yang dipilih
+        if ($request->role === 'Superadmin') {
+            $user->prodi_id = null;
+        } else {
+            $user->prodi_id = $request->prodi_id;
+        }
+
+        // 3. Update Password (Hanya jika diisi)
         if ($request->filled('password')) {
             $request->validate([
                 'password' => ['confirmed', Rules\Password::defaults()],
@@ -103,7 +115,7 @@ class AdminUserController extends Controller
 
         $user->save();
 
-        // Sync Role (Ganti role lama dengan yang baru)
+        // 4. Sync Role (Ganti role lama dengan yang baru)
         $user->syncRoles([$request->role]);
 
         return redirect()->route('admin.users.index')->with('success', 'Data user berhasil diperbarui');
@@ -112,9 +124,13 @@ class AdminUserController extends Controller
     /**
      * Hapus User
      */
-    public function destroy($id)
+    public function destroy(User $user)
     {
-        $user = User::findOrFail($id);
+        // Jangan biarkan user menghapus dirinya sendiri
+        if (auth()->id() == $user->id) {
+            return back()->with('error', 'Anda tidak bisa menghapus akun sendiri!');
+        }
+
         $user->delete();
         return redirect()->route('admin.users.index')->with('success', 'User berhasil dihapus');
     }

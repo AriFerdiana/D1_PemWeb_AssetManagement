@@ -3,42 +3,44 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
 
 class StoreAssetRequest extends FormRequest
 {
     /**
-     * Siapa yang boleh melakukan request ini?
+     * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        // Hanya Superadmin atau Laboran yang boleh akses
-        return Auth::check() && Auth::user()->hasRole(['Superadmin', 'Laboran']);
+        // PENTING: Ubah false jadi true agar request diizinkan
+        return true; 
     }
 
     /**
-     * Aturan Validasi
+     * Get the validation rules that apply to the request.
      */
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'serial_number' => 'required|unique:assets,serial_number',
-            'lab_id' => 'required|exists:labs,id',
-            'stock' => 'required|integer|min:1',
-            'image' => 'nullable|image|max:2048', // Max 2MB
+            'name'        => 'required|string|max:255',
+            'code'        => 'required|string|unique:assets,code|max:50', // Kode harus unik
+            'category_id' => 'required|exists:categories,id', // Harus ada di tabel kategori
+            'lab_id'      => 'required|exists:labs,id',       // Harus ada di tabel lab
+            'stock'       => 'required|integer|min:1',
+            'prodi'       => 'required|string',
+            'image'       => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Maks 2MB
         ];
     }
 
     /**
-     * Pesan Error Kustom (Opsional, biar bahasa Indonesia)
+     * Custom pesan error (Opsional biar bahasa Indonesia)
      */
     public function messages(): array
     {
         return [
-            'serial_number.unique' => 'Serial Number ini sudah terdaftar!',
-            'lab_id.exists' => 'Lab yang dipilih tidak valid.',
-            'image.max' => 'Ukuran gambar maksimal 2MB.',
+            'name.required' => 'Nama aset wajib diisi!',
+            'code.unique'   => 'Kode barang sudah ada, ganti yang lain.',
+            'stock.min'     => 'Stok minimal 1 dong.',
+            'image.image'   => 'File harus berupa gambar.',
         ];
     }
 }

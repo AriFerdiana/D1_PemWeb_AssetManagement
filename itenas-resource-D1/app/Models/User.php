@@ -6,20 +6,27 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Traits\HasRoles; // <--- PASTIKAN INI ADA
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles; // <--- PASTIKAN INI ADA DI DALAM CLASS
+    use HasFactory, Notifiable, HasRoles;
 
-protected $fillable = [
-    'name',
-    'email',
-    'password',
-    'google_id',
-    'avatar',
-    'prodi_id', // <--- Tambahkan ini agar bisa simpan ID Prodi
-];
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'google_id',
+        'avatar',
+        'prodi_id', // Sudah benar
+        'nim',      // <--- WAJIB DITAMBAHKAN (Agar data Ari Ferdiana bisa masuk)
+        'prodi',    // <--- OPSIONAL: Tambahkan ini JIKA di tabel database kamu masih ada kolom string 'prodi'
+    ];
 
     protected $hidden = [
         'password',

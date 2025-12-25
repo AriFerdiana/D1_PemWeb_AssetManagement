@@ -1,82 +1,130 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Edit Data Aset') }}
-        </h2>
-    </x-slot>
+    @section('header', 'Edit Data Aset')
 
-    <div class="py-12">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+        
+        <div class="mb-6 border-b pb-4 flex justify-between items-center">
+            <div>
+                <h2 class="text-xl font-bold text-navy-800">Edit Aset: {{ $asset->name }}</h2>
+                <p class="text-gray-500 text-sm">Update informasi aset terkini.</p>
+            </div>
+            <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded text-sm font-mono">
+                {{ $asset->code }}
+            </span>
+        </div>
+
+        {{-- Form Start --}}
+        {{-- Action ke route Update dengan ID --}}
+        <form action="{{ route('admin.assets.update', $asset->id) }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            @method('PUT') {{-- WAJIB: Untuk method Update --}}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 
-                <form action="{{ route('admin.assets.update', $asset->id) }}" method="POST" enctype="multipart/form-data">
-                    @csrf 
-                    @method('PUT')
+                {{-- Nama Aset --}}
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nama Aset</label>
+                    <input type="text" name="name" value="{{ old('name', $asset->name) }}" 
+                           class="w-full rounded-lg border-gray-300 focus:border-navy-500 focus:ring-navy-500 @error('name') border-red-500 @enderror">
+                    @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+
+                {{-- Kode Barang (Biasanya boleh diedit tapi harus unik) --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Kode Aset</label>
+                    <input type="text" name="code" value="{{ old('code', $asset->code) }}" 
+                           class="w-full rounded-lg border-gray-300 focus:border-navy-500 focus:ring-navy-500 @error('code') border-red-500 @enderror">
+                    @error('code') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+
+                {{-- Prodi --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Program Studi</label>
+                    <input type="text" name="prodi" value="{{ old('prodi', $asset->prodi) }}" 
+                           class="w-full rounded-lg border-gray-300 focus:border-navy-500 focus:ring-navy-500 @error('prodi') border-red-500 @enderror">
+                    @error('prodi') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+
+                {{-- Kategori --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Kategori</label>
+                    <select name="category_id" class="w-full rounded-lg border-gray-300 focus:border-navy-500 focus:ring-navy-500">
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat->id }}" {{ old('category_id', $asset->category_id) == $cat->id ? 'selected' : '' }}>
+                                {{ $cat->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Lokasi / Lab --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Lokasi Penyimpanan</label>
+                    <select name="lab_id" class="w-full rounded-lg border-gray-300 focus:border-navy-500 focus:ring-navy-500">
+                        @foreach($labs as $lab)
+                            <option value="{{ $lab->id }}" {{ old('lab_id', $asset->lab_id) == $lab->id ? 'selected' : '' }}>
+                                {{ $lab->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Stok --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Stok</label>
+                    <input type="number" name="stock" value="{{ old('stock', $asset->stock) }}" min="0"
+                           class="w-full rounded-lg border-gray-300 focus:border-navy-500 focus:ring-navy-500">
+                </div>
+
+                {{-- Status (Opsional, jika ingin bisa ubah status manual) --}}
+                {{-- 
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Status Kondisi</label>
+                    <select name="status" class="w-full rounded-lg border-gray-300">
+                        <option value="available" {{ $asset->status == 'available' ? 'selected' : '' }}>Available</option>
+                        <option value="maintenance" {{ $asset->status == 'maintenance' ? 'selected' : '' }}>Maintenance</option>
+                        <option value="broken" {{ $asset->status == 'broken' ? 'selected' : '' }}>Rusak</option>
+                    </select>
+                </div>
+                --}}
+
+                {{-- Upload Gambar (Dengan Preview) --}}
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Update Foto</label>
                     
-                    <div class="mb-4">
-                        <label class="block text-gray-700 dark:text-gray-300 mb-2">Nama Alat</label>
-                        <input type="text" name="name" value="{{ $asset->name }}" class="w-full rounded-md border-gray-300 dark:bg-gray-700 dark:text-white" required>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-gray-700 dark:text-gray-300 mb-2">Serial Number</label>
-                        <input type="text" name="serial_number" value="{{ $asset->serial_number }}" class="w-full rounded-md border-gray-300 dark:bg-gray-700 dark:text-white" required>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-gray-700 dark:text-gray-300 mb-2">Lokasi Lab</label>
-                        <select name="lab_id" class="w-full rounded-md border-gray-300 dark:bg-gray-700 dark:text-white">
-                            @foreach($labs as $lab)
-                                <option value="{{ $lab->id }}" {{ $asset->lab_id == $lab->id ? 'selected' : '' }}>
-                                    {{ $lab->name }} - {{ $lab->building_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-gray-700 dark:text-gray-300 mb-2 font-bold">Kondisi/Status Aset</label>
-                        <select name="status" class="w-full rounded-md border-gray-300 dark:bg-gray-700 dark:text-white focus:ring-blue-500">
-                            <option value="available" {{ $asset->status == 'available' ? 'selected' : '' }}>
-                                ✅ Tersedia (Available)
-                            </option>
-                            <option value="maintenance" {{ $asset->status == 'maintenance' ? 'selected' : '' }}>
-                                🛠️ Sedang Diperbaiki (Maintenance)
-                            </option>
-                            <option value="broken" {{ $asset->status == 'broken' ? 'selected' : '' }}>
-                                ❌ Rusak (Broken)
-                            </option>
-                            {{-- Status Borrowed dikunci agar tidak bisa diubah manual secara sembarangan --}}
-                            <option value="borrowed" {{ $asset->status == 'borrowed' ? 'selected' : '' }} @if($asset->status != 'borrowed') disabled @endif>
-                                📦 Sedang Dipinjam (Borrowed)
-                            </option>
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1 italic">*Jika status 'Maintenance' atau 'Broken', aset akan otomatis hilang dari katalog mahasiswa.</p>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-gray-700 dark:text-gray-300 mb-2">Stok Saat Ini</label>
-                        <input type="number" name="stock" value="{{ $asset->stock }}" class="w-full rounded-md border-gray-300 dark:bg-gray-700 dark:text-white" min="0" required>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-gray-700 dark:text-gray-300 mb-2">Foto Saat Ini</label>
-                        @if($asset->image_path)
-                            <img src="{{ asset('storage/' . $asset->image_path) }}" alt="Asset Image" class="w-32 h-32 object-cover rounded-md mb-2 shadow">
-                        @else
-                            <p class="text-gray-500 text-sm">Tidak ada foto.</p>
+                    <div class="flex items-start gap-4">
+                        {{-- Preview Gambar Lama --}}
+                        @if($asset->image)
+                            <div class="w-24 h-24 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                                <img src="{{ asset('storage/' . $asset->image) }}" class="w-full h-full object-cover" title="Foto Saat Ini">
+                            </div>
                         @endif
-                        <label class="block text-gray-700 dark:text-gray-300 mb-2 mt-4 text-sm font-semibold text-blue-600">Ganti Foto Baru</label>
-                        <input type="file" name="image" class="block w-full text-sm text-gray-500">
-                    </div>
 
-                    <div class="flex justify-between mt-6">
-                        <a href="{{ route('admin.assets.index') }}" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">Batal</a>
-                        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-bold shadow-lg transition">Update Data & Status</button>
+                        <div class="flex-1">
+                            <input type="file" name="image" class="block w-full text-sm text-gray-500
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-full file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-navy-50 file:text-navy-700
+                                hover:file:bg-navy-100 cursor-pointer
+                            "/>
+                            <p class="mt-1 text-xs text-gray-500">Biarkan kosong jika tidak ingin mengubah foto.</p>
+                            @error('image') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        </div>
                     </div>
-                </form>
+                </div>
 
             </div>
-        </div>
+
+            {{-- Tombol Aksi --}}
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <a href="{{ route('admin.assets.index') }}" class="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium">
+                    Batal
+                </a>
+                <button type="submit" class="px-5 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition font-medium shadow-lg">
+                    <i class="fas fa-sync-alt mr-2"></i> Update Perubahan
+                </button>
+            </div>
+        </form>
     </div>
 </x-app-layout>

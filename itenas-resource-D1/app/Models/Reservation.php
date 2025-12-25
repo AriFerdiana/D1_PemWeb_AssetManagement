@@ -9,56 +9,67 @@ class Reservation extends Model
 {
     use HasFactory;
 
-    // Kita ubah ke $fillable agar lebih aman dan jelas kolom apa saja yang ada
+    protected $table = 'reservations'; // Opsional, tapi bagus untuk memastikan nama tabel
+
+    // PERBAIKAN: Menambahkan kolom-kolom yang tadi kita pakai di Seeder & Controller
     protected $fillable = [
         'user_id',
-        'asset_id',         // ID Aset (Jika sistem 1 reservasi = 1 aset)
-        'lab_id',           // ID Lab (Jika booking ruangan)
-        'transaction_code', // Kode TRX
+        'asset_id',         // ID Aset (Jika tipe = asset)
+        'lab_id',           // ID Lab (Jika tipe = room / booking)
+        'transaction_code',
         'start_time',
         'end_time',
         'status',           // pending, approved, borrowed, returned, rejected
-        'type',             // asset / room
+        'type',             // asset / room / booking
+        'purpose',          // Keperluan peminjaman
         
-        // === KOLOM BARU (DENDA) ===
-        'penalty_amount',
-        'penalty_status',
+        // Bagian Denda & Penolakan
+        'rejection_note',   // Alasan penolakan
+        'penalty',          // Nominal denda (sesuai controller)
+        'penalty_amount',   // Cadangan jika database pakai nama ini
+        'penalty_status',   // paid / unpaid
+        
+        // Bagian Pembayaran
+        'payment_status',   // paid / unpaid
+        'payment_method',   // Cash / Transfer / QRIS
+        'proposal_file',    // Jika ada upload proposal
     ];
 
-    // PENTING: Casting Tanggal agar bisa diformat ($item->start_time->format('d M Y'))
+    // Casting agar otomatis jadi Carbon Object (Bisa format tanggal)
     protected $casts = [
         'start_time' => 'datetime',
         'end_time'   => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     // === RELASI ===
 
-    // 1. Ke User
+    // 1. Ke User (Peminjam)
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    // 2. Ke Asset (PENTING: Dashboard memanggil $trx->asset->name)
-    // Relasi ini dipakai jika 1 Reservasi hanya untuk 1 Barang
+    // 2. Ke Asset (Jika peminjaman barang)
     public function asset()
     {
         return $this->belongsTo(Asset::class);
     }
 
-    // 3. Ke Reservation Items (Dipakai jika 1 Reservasi = Banyak Barang)
+    // 3. Ke Lab (INI WAJIB ADA untuk perbaikan Controller tadi)
+    public function lab()
+    {
+        return $this->belongsTo(Lab::class, 'lab_id');
+    }
+
+    // 4. Relasi Item (Jika sistem keranjang)
     public function reservationItems()
     {
         return $this->hasMany(ReservationItem::class);
     }
 
-    // 4. Ke Lab (Dipakai jika type = 'room')
-    public function lab()
-    {
-        return $this->belongsTo(Lab::class);
-    }
-
-    // 5. Ke Payment (Jika ada)
+    // 5. Pembayaran (Opsional jika dipisah tabel)
     public function payment()
     {
         return $this->hasOne(Payment::class);

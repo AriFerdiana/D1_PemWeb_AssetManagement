@@ -8,10 +8,22 @@ use Illuminate\Database\Eloquent\Model;
 class Prodi extends Model
 {
     use HasFactory;
-    protected $guarded = ['id']; // Izinkan semua kolom diisi
 
+    protected $guarded = ['id'];
+
+    /**
+     * Relasi: Satu Prodi punya banyak Lab
+     */
     public function labs()
     {
         return $this->hasMany(Lab::class);
+    }
+
+    /**
+     * Relasi: Satu Prodi punya banyak User (Mahasiswa/Laboran)
+     */
+    public function users()
+    {
+        return $this->hasMany(User::class);
     }
 }

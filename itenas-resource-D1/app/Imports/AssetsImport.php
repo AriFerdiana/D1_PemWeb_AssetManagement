@@ -3,26 +3,33 @@
 namespace App\Imports;
 
 use App\Models\Asset;
-use App\Models\Lab;
+use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Concerns\ToModel;
-use Maatwebsite\Excel\Concerns\WithHeadingRow; // Agar membaca header baris pertama
+use Maatwebsite\Excel\Concerns\WithHeadingRow; // Agar baca header tabel
 
-class AssetsImport implements ToModel, WithHeadingRow
+class AssetImport implements ToModel, WithHeadingRow
 {
+    /**
+    * @param array $row
+    *
+    * @return \Illuminate\Database\Eloquent\Model|null
+    */
     public function model(array $row)
     {
-        // Pastikan Excel punya header: nama_aset, kode_aset, stok, kode_ruangan
-        
-        // Cari ID Lab berdasarkan kode ruangan di excel
-        $lab = Lab::where('code', $row['kode_ruangan'])->first();
+        // Logika: Jika user Laboran, prodi otomatis ikut Laboran
+        // Jika Superadmin, ambil dari Excel, kalau kosong default '-'
+        $user = Auth::user();
+        $prodi = $user->hasRole('Superadmin') ? ($row['prodi'] ?? '-') : $user->prodi;
 
         return new Asset([
-            'name'     => $row['nama_aset'],
-            'code'     => $row['kode_aset'],
-            'stock'    => $row['stok'],
-            'lab_id'   => $lab ? $lab->id : null, // Jika kode lab salah, biarkan kosong
-            'status'   => 'good', // Default kondisi baik
-            'image'    => null,
+            'name'        => $row['nama_aset'],      // Sesuaikan dengan judul kolom di Excel
+            'code'        => $row['kode_aset'],
+            'category_id' => $row['id_kategori'],    // Di Excel isi angkanya (1, 2, dll)
+            'lab_id'      => $row['id_lab'],         // Di Excel isi angkanya
+            'stock'       => $row['stok'],
+            'prodi'       => $prodi,
+            'status'      => 'available',            // Default status
+            'image'       => null,                   // Gambar kosong dulu
         ]);
     }
 }

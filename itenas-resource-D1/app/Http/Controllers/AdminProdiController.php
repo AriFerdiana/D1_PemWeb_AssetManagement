@@ -7,41 +7,41 @@ use Illuminate\Http\Request;
 
 class AdminProdiController extends Controller
 {
-    // 1. LIHAT DAFTAR PRODI
-    public function index()
-    {
+    public function index() {
         $prodis = Prodi::latest()->paginate(10);
         return view('admin.prodis.index', compact('prodis'));
     }
 
-    // 2. FORM TAMBAH
-    public function create()
-    {
+    public function create() {
         return view('admin.prodis.create');
     }
 
-    // 3. SIMPAN DATA
-    public function store(Request $request)
-    {
+    public function store(Request $request) {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|unique:prodis,code|max:10',
-            'kaprodi_name' => 'nullable|string|max:255', // Kolom tambahan tadi
+            'name' => 'required',
+            'code' => 'required|unique:prodis,code',
+            'faculty' => 'required'
         ]);
-
         Prodi::create($request->all());
-
-        return redirect()->route('admin.prodis.index')->with('success', 'Program Studi berhasil ditambahkan!');
+        return redirect()->route('admin.prodis.index')->with('success', 'Prodi berhasil dibuat');
     }
 
-    // 4. HAPUS DATA
-    public function destroy($id)
-    {
-        try {
-            Prodi::findOrFail($id)->delete();
-            return back()->with('success', 'Prodi berhasil dihapus.');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Gagal hapus. Masih ada user di Prodi ini.');
-        }
+    public function edit(Prodi $prodi) {
+        return view('admin.prodis.edit', compact('prodi'));
+    }
+
+    public function update(Request $request, Prodi $prodi) {
+        $request->validate([
+            'name' => 'required',
+            'code' => 'required|unique:prodis,code,'.$prodi->id,
+            'faculty' => 'required'
+        ]);
+        $prodi->update($request->all());
+        return redirect()->route('admin.prodis.index')->with('success', 'Prodi berhasil diupdate');
+    }
+
+    public function destroy(Prodi $prodi) {
+        $prodi->delete();
+        return redirect()->route('admin.prodis.index')->with('success', 'Prodi dihapus');
     }
 }

@@ -4,11 +4,42 @@ namespace App\Http\Controllers;
 
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Reservation;
+use App\Models\Lab; 
 use Illuminate\Http\Request;
-use Carbon\Carbon; // Pastikan import Carbon untuk urusan waktu
+use Carbon\Carbon;
 
 class AdminReservationController extends Controller
 {
+    /**
+     * Menampilkan daftar transaksi untuk Admin
+     */
+    public function index(Request $request)
+    {
+        // Mengambil data reservasi dengan relasi user dan lab
+        $query = Reservation::with(['user', 'lab'])->latest();
+
+        // Fitur Pencarian berdasarkan Kode TRX atau Nama User
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('transaction_code', 'like', "%{$search}%")
+                  ->orWhereHas('user', function($u) use ($search) {
+                      $u->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter berdasarkan Status
+        if ($request->filled('status') && $request->status !== 'Semua Status') {
+            $query->where('status', $request->status);
+        }
+
+        $reservations = $query->paginate(10);
+
+        // PERBAIKAN: Mengarah ke folder dan nama file yang benar sesuai VS Code Anda
+        return view('reservations.index_rooms', compact('reservations')); 
+    }
+
     public function scanIndex()
     {
         return view('admin.scan');
@@ -16,7 +47,6 @@ class AdminReservationController extends Controller
 
     public function scanProcess(Request $request)
     {
-        // Mencari reservasi berdasarkan QR Code (Transaction Code)
         $reservation = Reservation::where('transaction_code', $request->qr_code)->first();
 
         if (!$reservation) {
@@ -25,104 +55,55 @@ class AdminReservationController extends Controller
 
         $now = Carbon::now();
 
-        // 1. LOGIC CHECK-IN (Mahasiswa mengambil barang)
         if ($reservation->status == 'approved') {
-            $reservation->update([
-                'status' => 'borrowed',
-                // Opsional: simpan waktu pengambilan aktual jika kamu punya kolomnya
-                // 'actual_borrowed_at' => $now 
-            ]);
-
-            return response()->json([
-                'success' => true, 
-                'message' => "Check-in Berhasil! Barang siap diambil oleh {$reservation->user->name}."
-            ]);
+            $reservation->update(['status' => 'borrowed']);
+            return response()->json(['success' => true, 'message' => "Check-in Berhasil!"]);
         } 
         
-        // 2. LOGIC CHECK-OUT (Mahasiswa mengembalikan barang) + HITUNG DENDA
         if ($reservation->status == 'borrowed') {
             $endTime = Carbon::parse($reservation->end_time);
-            $penalty = 0;
-            $statusPesan = "Check-out Berhasil! Barang telah dikembalikan tepat waktu.";
-
-            // Cek apakah sekarang sudah melewati batas waktu (end_time)
             if ($now->gt($endTime)) {
-                // Hitung selisih hari. diffInDays akan menghasilkan 0 jika telat beberapa jam di hari yang sama.
-                // Kita gunakan ceil (pembulatan ke atas) atau logika manual agar telat dikit tetap hitung 1 hari.
-                $daysLate = $now->diffInDays($endTime);
-                
-                // Jika telat jam (di hari yang sama) atau selisih hari >= 0
-                // Kita asumsikan telat 1 menit pun masuk hitungan 1 hari denda sesuai kebijakan kampus.
-                $daysLate = ($daysLate == 0) ? 1 : $daysLate;
-
-                $penalty = $daysLate * 5000;
-                $statusPesan = "Check-out Berhasil! TELAT {$daysLate} hari. Denda: Rp " . number_format($penalty);
-                
-                // Update denda dan status pembayaran ke database
-                $reservation->penalty = $penalty;
-                $reservation->payment_status = 'unpaid'; // Set jadi belum bayar
+                $daysLate = $now->diffInDays($endTime) ?: 1;
+                $reservation->penalty = $daysLate * 50000;
+                $reservation->payment_status = 'unpaid';
+                $reservation->penalty_status = 'unpaid';
             }
-
             $reservation->status = 'returned';
-            // Simpan waktu pengembalian aktual
-            $reservation->actual_returned_at = $now; 
             $reservation->save();
-
-            return response()->json([
-                'success' => true, 
-                'message' => $statusPesan
-            ]);
+            return response()->json(['success' => true, 'message' => "Check-out Berhasil!"]);
         }
 
-        return response()->json(['success' => false, 'message' => 'Status transaksi tidak valid untuk scan ini.']);
+        return response()->json(['success' => false, 'message' => 'Status tidak valid.']);
     }
 
-    /**
-     * Fitur Pembayaran Denda (Dipanggil dari halaman Histori Admin)
-     */
     public function payPenalty(Request $request, $id)
     {
         $reservation = Reservation::findOrFail($id);
-        
-        $request->validate([
-            'payment_method' => 'required|in:Cash,Transfer,QRIS'
-        ]);
-
         $reservation->update([
             'payment_status' => 'paid',
-            'payment_method' => $request->payment_method
+            'penalty_status' => 'paid',
+            'payment_method' => $request->payment_method ?? 'Cash'
         ]);
-
-        return back()->with('success', 'Denda sebesar Rp ' . number_format($reservation->penalty) . ' telah dibayar via ' . $request->payment_method);
+        return back()->with('success', 'Denda telah dibayar.');
     }
 
     public function exportPDF(Request $request)
-{
-    // Ambil data berdasarkan bulan dan tahun (default bulan ini)
-    $month = $request->month ?? date('m');
-    $year = $request->year ?? date('Y');
+    {
+        $month = $request->month ?? date('m');
+        $year = $request->year ?? date('Y');
 
-    $reservations = Reservation::with(['user', 'reservationItems.asset'])
-        ->whereMonth('created_at', $month)
-        ->whereYear('created_at', $year)
-        ->get();
+        $reservations = Reservation::with(['user', 'lab'])
+            ->whereMonth('created_at', $month)
+            ->whereYear('created_at', $year)
+            ->get();
 
-    $totalDenda = $reservations->where('payment_status', 'paid')->sum('penalty');
+        $data = [
+            'title' => 'Laporan Peminjaman Lab Itenas',
+            'reservations' => $reservations,
+            'totalDenda' => $reservations->where('payment_status', 'paid')->sum('penalty')
+        ];
 
-    // Menyiapkan data untuk dikirim ke view PDF
-    $data = [
-        'title' => 'Laporan Peminjaman Aset Itenas',
-        'date' => date('d/m/Y'),
-        'reservations' => $reservations,
-        'month' => $month,
-        'year' => $year,
-        'totalDenda' => $totalDenda
-    ];
-
-    // Load view khusus PDF
-    $pdf = Pdf::loadView('admin.reports.peminjaman_pdf', $data);
-
-    // Download file PDF
-    return $pdf->download('Laporan-Peminjaman-'.$month.'-'.$year.'.pdf');
-}
+        $pdf = Pdf::loadView('admin.reports.peminjaman_pdf', $data);
+        return $pdf->download('Laporan-Reservasi.pdf');
+    }
 }

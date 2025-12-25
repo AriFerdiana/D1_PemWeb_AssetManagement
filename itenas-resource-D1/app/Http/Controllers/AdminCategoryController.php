@@ -19,11 +19,21 @@ class AdminCategoryController extends Controller
     public function store(Request $request) {
         $request->validate(['name' => 'required|string|max:255']);
         Category::create($request->all());
-        return redirect()->route('admin.categories.index')->with('success', 'Kategori berhasil dibuat!');
+        return redirect()->route('admin.categories.index')->with('success', 'Kategori berhasil dibuat');
     }
 
-    public function destroy($id) {
-        Category::findOrFail($id)->delete();
-        return back()->with('success', 'Kategori dihapus.');
+    public function edit(Category $category) {
+        return view('admin.categories.edit', compact('category'));
+    }
+
+    public function update(Request $request, Category $category) {
+        $request->validate(['name' => 'required|string|max:255']);
+        $category->update($request->all());
+        return redirect()->route('admin.categories.index')->with('success', 'Kategori berhasil diupdate');
+    }
+
+    public function destroy(Category $category) {
+        $category->delete(); // Aset yang kategorinya ini akan jadi NULL (sesuai migration kita)
+        return redirect()->route('admin.categories.index')->with('success', 'Kategori dihapus');
     }
 }

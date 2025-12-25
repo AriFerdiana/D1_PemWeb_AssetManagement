@@ -1,53 +1,67 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                {{ __('Kelola Program Studi') }}
-            </h2>
-            <a href="{{ route('admin.prodis.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm font-bold">
-                + Tambah Prodi
+    @section('header', 'Kelola Program Studi')
+
+    <div class="max-w-6xl mx-auto bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold text-navy-700">Daftar Program Studi</h3>
+            <a href="{{ route('admin.prodis.create') }}" class="px-4 py-2 bg-navy-700 hover:bg-navy-800 text-white rounded-lg text-sm font-bold shadow-md transition flex items-center gap-2">
+                <i class="fas fa-plus"></i> Tambah Prodi
             </a>
         </div>
-    </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                
-                @if(session('success'))
-                    <div class="bg-green-100 text-green-800 p-4 rounded mb-4">{{ session('success') }}</div>
-                @endif
-                @if(session('error'))
-                    <div class="bg-red-100 text-red-800 p-4 rounded mb-4">{{ session('error') }}</div>
-                @endif
+        <div class="overflow-x-auto rounded-lg border border-gray-100">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-50 text-gray-600 font-bold uppercase text-xs">
+                    <tr>
+                        <th class="px-6 py-4">Fakultas</th>
+                        <th class="px-6 py-4">Kode</th>
+                        <th class="px-6 py-4">Nama Prodi</th>
+                        <th class="px-6 py-4">Lokasi Kantor</th>
+                        <th class="px-6 py-4 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse($prodis as $prodi)
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 font-bold text-gray-500">{{ $prodi->faculty }}</td>
+                        <td class="px-6 py-4">
+                            <span class="bg-teal-100 text-teal-800 px-2 py-1 rounded text-xs font-mono font-bold border border-teal-200">
+                                {{ $prodi->code }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 font-bold text-navy-800">{{ $prodi->name }}</td>
+                        <td class="px-6 py-4 text-gray-600 text-xs">
+                            <i class="fas fa-map-marker-alt text-red-400 mr-1"></i> {{ $prodi->location_office ?? '-' }}
+                        </td>
 
-                <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                        <tr>
-                            <th class="px-6 py-3">Nama Prodi</th>
-                            <th class="px-6 py-3">Kode</th>
-                            <th class="px-6 py-3">Kaprodi</th>
-                            <th class="px-6 py-3">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($prodis as $prodi)
-                        <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                            <td class="px-6 py-4 font-bold">{{ $prodi->name }}</td>
-                            <td class="px-6 py-4 font-mono">{{ $prodi->code }}</td>
-                            <td class="px-6 py-4">{{ $prodi->kaprodi_name ?? '-' }}</td>
-                            <td class="px-6 py-4">
-                                <form action="{{ route('admin.prodis.destroy', $prodi->id) }}" method="POST" onsubmit="return confirm('Hapus prodi ini?');">
+                        {{-- BAGIAN AKSI (IKON) --}}
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex justify-center gap-2">
+                                <a href="{{ route('admin.prodis.edit', $prodi->id) }}" class="p-2 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100 transition border border-yellow-100" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ route('admin.prodis.destroy', $prodi->id) }}" method="POST" onsubmit="return confirm('Hapus prodi ini? Data lab dan user terkait mungkin akan error.');">
                                     @csrf @method('DELETE')
-                                    <button type="submit" class="text-red-500 hover:text-red-700 font-bold">Hapus</button>
+                                    <button type="submit" class="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition border border-red-100" title="Hapus">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </form>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-                <div class="mt-4">{{ $prodis->links() }}</div>
-            </div>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                            Belum ada data program studi.
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4">
+            {{ $prodis->links() }}
         </div>
     </div>
 </x-app-layout>

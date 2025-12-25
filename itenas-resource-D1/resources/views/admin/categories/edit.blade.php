@@ -1,16 +1,16 @@
 <x-app-layout>
-    @section('header', 'Tambah Kategori Aset')
+    @section('header', 'Edit Kategori Aset')
 
     <div class="max-w-xl mx-auto bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         
-        <form action="{{ route('admin.categories.store') }}" method="POST">
+        <form action="{{ route('admin.categories.update', $category->id) }}" method="POST">
             @csrf
+            @method('PUT')
             
             {{-- Nama Kategori --}}
             <div class="mb-6">
                 <label class="block text-sm font-bold text-gray-700 mb-2">Nama Kategori</label>
-                <input type="text" name="name" class="w-full rounded-lg border-gray-300 focus:ring-teal-500 focus:border-teal-500" placeholder="Contoh: Elektronik, Furniture" required autofocus>
-                <p class="text-xs text-gray-500 mt-1">Nama kategori ini akan muncul saat menambah aset baru.</p>
+                <input type="text" name="name" value="{{ old('name', $category->name) }}" class="w-full rounded-lg border-gray-300 focus:ring-teal-500 focus:border-teal-500" required>
             </div>
 
             {{-- Tombol Aksi --}}
@@ -19,7 +19,7 @@
                     Batal
                 </a>
                 <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 shadow-md transition">
-                    Simpan Kategori
+                    Simpan Perubahan
                 </button>
             </div>
         </form>

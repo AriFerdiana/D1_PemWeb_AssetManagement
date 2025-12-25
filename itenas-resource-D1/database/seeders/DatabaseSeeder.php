@@ -7,20 +7,40 @@ use App\Models\User;
 use App\Models\Prodi;
 use App\Models\Lab;
 use App\Models\Asset;
+use App\Models\Category;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * Seed the application's database.
+     */
     public function run(): void
     {
-        // 1. BUAT ROLE
-        $roleSuperAdmin = Role::create(['name' => 'Superadmin']);
-        $roleLaboran = Role::create(['name' => 'Laboran']);
-        $roleMahasiswa = Role::create(['name' => 'Mahasiswa']);
-        $roleDosen = Role::create(['name' => 'Dosen']);
+        // 0. BERSIHKAN DATA LAMA (Reset Table agar bersih)
+        Schema::disableForeignKeyConstraints();
+        User::truncate();
+        Prodi::truncate();
+        Lab::truncate();
+        Asset::truncate();
+        Category::truncate();
+        Schema::enableForeignKeyConstraints();
 
-        // 2. CONFIGURASI DATA PRODI, LAB, & CONTOH ALAT (Data Lengkap ITENAS)
+        // 1. BUAT ROLE
+        $roleSuperAdmin = Role::firstOrCreate(['name' => 'Superadmin']);
+        $roleLaboran    = Role::firstOrCreate(['name' => 'Laboran']);
+        $roleMahasiswa  = Role::firstOrCreate(['name' => 'Mahasiswa']);
+        $roleDosen      = Role::firstOrCreate(['name' => 'Dosen']);
+
+        // 2. BUAT KATEGORI (PENTING: Agar filter kategori di Controller jalan)
+        $catElektronik = Category::create(['name' => 'Elektronik & Komputer']);
+        $catFurniture  = Category::create(['name' => 'Furniture & Mebel']);
+        $catAlatBerat  = Category::create(['name' => 'Alat Berat & Mesin']);
+        $catAlatUkur   = Category::create(['name' => 'Alat Ukur']);
+
+        // 3. CONFIGURASI DATA LENGKAP ITENAS
         $dataFakultas = [
             'FTI' => [
                 'Informatika' => [
@@ -50,7 +70,7 @@ class DatabaseSeeder extends Seeder
             ],
             'FTSP' => [
                 'Teknik Sipil' => [
-                    'code' => 'SI', 'lab' => 'Lab Uji Bahan & Beton', 'gedung' => 'Gedung 12',
+                    'code' => 'SIP', 'lab' => 'Lab Uji Bahan & Beton', 'gedung' => 'Gedung 12',
                     'assets' => ['Mesin Uji Tekan Beton', 'Theodolite Digital', 'Waterpass', 'Hammer Test']
                 ],
                 'Teknik Geodesi' => [
@@ -86,93 +106,96 @@ class DatabaseSeeder extends Seeder
             ]
         ];
 
-        // Variabel untuk menyimpan ID Informatika (buat Ari Ferdiana)
+        // Variabel penampung ID Prodi Informatika
         $idProdiInformatika = null;
 
-        // 3. LOOPING PEMBUATAN DATA (Prodi -> Lab -> Asset)
+        // 4. LOOPING UTAMA (Prodi -> Lab -> Asset -> LABORAN)
         foreach ($dataFakultas as $fakultas => $prodis) {
             foreach ($prodis as $namaProdi => $data) {
-                // Buat Prodi
+                
+                // A. Buat Prodi
                 $prodi = Prodi::create([
                     'name' => $namaProdi,
-                    'code' => $data['code'] . '-' . rand(100, 999), // Code unik
+                    'code' => $data['code'],
                     'faculty' => $fakultas,
                     'location_office' => $data['gedung'],
                     'contact_email' => strtolower(str_replace(' ', '', $data['code'])) . '@itenas.ac.id'
                 ]);
 
-                // Simpan ID Informatika
+                // Simpan ID jika Informatika (Untuk Ari Ferdiana nanti)
                 if ($namaProdi === 'Informatika') {
                     $idProdiInformatika = $prodi->id;
                 }
 
-                // Buat Lab untuk Prodi tersebut
+                // B. BUAT AKUN LABORAN UNTUK PRODI INI
+                $emailPrefix = strtolower(str_replace(' ', '', $namaProdi));
+                $emailPrefix = str_replace('&', 'dan', $emailPrefix); // Jaga-jaga karakter aneh
+
+                $laboran = User::create([
+                    'name'      => 'Admin Lab ' . $namaProdi,
+                    'email'     => 'laboran.' . $data['code'] . '@itenas.ac.id', // Pakai kode prodi biar pendek (laboran.if@itenas.ac.id)
+                    'password'  => Hash::make('password123'),
+                    'prodi_id'  => $prodi->id, // PENTING: Relasi ke tabel prodi
+                ]);
+                $laboran->assignRole($roleLaboran);
+
+
+                // C. Buat Lab
                 $lab = Lab::create([
                     'prodi_id' => $prodi->id,
                     'name' => $data['lab'],
                     'building_name' => $data['gedung'],
                     'room_number' => rand(1, 4) . '0' . rand(1, 9),
                     'capacity' => rand(20, 40),
-                    'latitude' => -6.890000 + (rand(0, 1000) / 100000), // Koordinat dummy sekitar Itenas
-                    'longitude' => 107.630000 + (rand(0, 1000) / 100000),
-                    'description' => 'Fasilitas praktikum untuk mahasiswa ' . $namaProdi
+                    'description' => 'Fasilitas praktikum ' . $namaProdi
                 ]);
 
-                // Buat 5-8 Aset untuk setiap Lab
+                // D. Buat Aset
                 foreach ($data['assets'] as $assetName) {
                     for ($i = 1; $i <= rand(2, 3); $i++) {
+                        
+                        // Logika random kategori biar data bervariasi
+                        $randomCatId = $catElektronik->id;
+                        if (str_contains($assetName, 'Meja') || str_contains($assetName, 'Kursi')) $randomCatId = $catFurniture->id;
+                        if (str_contains($assetName, 'Mesin') || str_contains($assetName, 'Bubut')) $randomCatId = $catAlatBerat->id;
+                        if (str_contains($assetName, 'Meter') || str_contains($assetName, 'Ukur')) $randomCatId = $catAlatUkur->id;
+
                         Asset::create([
                             'lab_id' => $lab->id,
+                            'category_id' => $randomCatId, 
+                            'prodi' => $namaProdi, // String nama prodi untuk kompatibilitas filter
                             'name' => $assetName . ' - Unit ' . $i,
-                            'serial_number' => strtoupper($data['code']) . '-' . rand(10000, 99999),
-                            'description' => 'Aset inventaris ' . $namaProdi,
+                            'code' => $data['code'] . '-' . rand(1000, 9999) . '-' . $i,
                             'stock' => 1,
-                            'condition' => 'good',
-                            'rental_price' => rand(0, 1) ? 0 : 25000, // Kadang gratis, kadang bayar
-                            'image_path' => 'assets/dummy.jpg'
+                            'status' => 'available',
+                            'image' => null
                         ]);
                     }
                 }
             }
         }
 
-        // 4. BUAT USER
-        // A. Superadmin
+        // 5. BUAT USER SPESIFIK LAINNYA
+
+        // A. Superadmin (Bisa lihat semua)
         $admin = User::create([
-            'name' => 'Admin Sarpras Itenas',
-            'email' => 'admin@itenas.ac.id',
-            'password' => Hash::make('password'),
+            'name' => 'Super Administrator',
+            'email' => 'superadmin@itenas.ac.id',
+            'password' => Hash::make('password123'),
+            'prodi_id' => null, 
         ]);
         $admin->assignRole($roleSuperAdmin);
 
-        // B. Laboran (Contoh Laboran Informatika)
-        $laboran = User::create([
-            'name' => 'Laboran Informatika',
-            'email' => 'laboran_if@itenas.ac.id',
-            'password' => Hash::make('password'),
-            'prodi_id' => $idProdiInformatika,
-        ]);
-        $laboran->assignRole($roleLaboran);
-
-        // C. KETUA KELOMPOK D1 (Ari Ferdiana)
-        // Pastikan variabel $idProdiInformatika sudah terisi dari looping di atas
-        $ari = User::create([
-            'name' => 'Ari Ferdiana (Ketua D1)',
-            'email' => 'ari.ferdiana@mhs.itenas.ac.id',
-            'password' => Hash::make('password'),
-            'prodi_id' => $idProdiInformatika, // Otomatis masuk Informatika
-        ]);
-        $ari->assignRole($roleMahasiswa);
-
-        // D. Mahasiswa Dummy Lain (Dari Prodi Acak selain Informatika)
-        // Ambil ID prodi acak
-        $randomProdi = Prodi::where('name', '!=', 'Informatika')->inRandomOrder()->first();
-        $mhsLain = User::create([
-            'name' => 'Mahasiswa ' . $randomProdi->name,
-            'email' => 'mhs_lain@mhs.itenas.ac.id',
-            'password' => Hash::make('password'),
-            'prodi_id' => $randomProdi->id,
-        ]);
-        $mhsLain->assignRole($roleMahasiswa);
+        // B. Ari Ferdiana (Mahasiswa Informatika)
+        if ($idProdiInformatika) {
+            $ari = User::create([
+                'name' => 'Ari Ferdiana',
+                'nim'  => '152024003', // Tambahkan NIM sesuai request & migrasi
+                'email' => 'ari.ferdiana@mhs.itenas.ac.id',
+                'password' => Hash::make('password123'),
+                'prodi_id' => $idProdiInformatika,
+            ]);
+            $ari->assignRole($roleMahasiswa);
+        }
     }
 }

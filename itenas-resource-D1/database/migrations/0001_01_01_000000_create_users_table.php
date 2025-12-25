@@ -19,24 +19,31 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             
-            // --- BAGIAN PENTING YANG DITAMBAHKAN ---
-            // Menambahkan kolom prodi_id agar tidak error saat seeding.
-            // Dibuat nullable() karena Superadmin tidak punya prodi.
+            // --- PERBAIKAN DI SINI ---
+            
+            // 1. Tambahkan NIM (Wajib ada karena Seeder Ari Ferdiana pakai NIM)
+            // Nullable: Karena Superadmin & Laboran tidak punya NIM
+            $table->string('nim', 20)->nullable()->unique();
+
+            // 2. Kolom Prodi ID (Relasi ke tabel prodis)
+            // Pastikan tabel 'prodis' dibuat SEBELUM tabel 'users' agar tidak error.
+            // Jika urutan migration users lebih duluan, hapus ->constrained() dan pakai ->index() saja.
             $table->foreignId('prodi_id')->nullable()->index(); 
-            // ---------------------------------------
+            
+            // -------------------------
 
             $table->rememberToken();
             $table->timestamps();
         });
 
-        // 2. Tabel Password Reset Tokens (Bawaan Laravel)
+        // 2. Tabel Password Reset Tokens
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
             $table->timestamp('created_at')->nullable();
         });
 
-        // 3. Tabel Sessions (Bawaan Laravel)
+        // 3. Tabel Sessions
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->foreignId('user_id')->nullable()->index();
