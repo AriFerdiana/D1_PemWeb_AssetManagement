@@ -4,41 +4,54 @@ namespace App\Http\Controllers;
 
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Reservation;
-use App\Models\Lab; 
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use App\Http\Controllers\Controller; 
 
 class AdminReservationController extends Controller
 {
     /**
-     * Menampilkan daftar transaksi untuk Admin
+     * Menampilkan daftar transaksi dengan Filter Tanggal
      */
     public function index(Request $request)
     {
-        // Mengambil data reservasi dengan relasi user dan lab
-        $query = Reservation::with(['user', 'lab'])->latest();
+        // 1. Mulai Query
+        $query = Reservation::with(['user', 'asset', 'lab']);
 
-        // Fitur Pencarian berdasarkan Kode TRX atau Nama User
+        // 2. LOGIKA SEARCH (Keyword)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('transaction_code', 'like', "%{$search}%")
+                $q->where('transaction_code', 'like', "%{$search}%") 
                   ->orWhereHas('user', function($u) use ($search) {
                       $u->where('name', 'like', "%{$search}%");
                   });
             });
         }
 
-        // Filter berdasarkan Status
-        if ($request->filled('status') && $request->status !== 'Semua Status') {
+        // 3. LOGIKA FILTER STATUS
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        $reservations = $query->paginate(10);
+        // 4. LOGIKA FILTER TANGGAL (BARU)
+        // Jika user mengisi Tanggal Awal
+        if ($request->filled('start_date')) {
+            $query->whereDate('start_time', '>=', $request->start_date);
+        }
+        // Jika user mengisi Tanggal Akhir
+        if ($request->filled('end_date')) {
+            $query->whereDate('start_time', '<=', $request->end_date);
+        }
 
-        // PERBAIKAN: Mengarah ke folder dan nama file yang benar sesuai VS Code Anda
-        return view('reservations.index_rooms', compact('reservations')); 
+        // 5. Ambil data (Pagination)
+        $reservations = $query->latest()->paginate(10)->withQueryString();
+
+        // Mengarah ke file view Anda
+        return view('reservations.index_assets', compact('reservations'));
     }
+
+    // --- FUNCTION LAIN TETAP SAMA ---
 
     public function scanIndex()
     {
@@ -62,18 +75,20 @@ class AdminReservationController extends Controller
         
         if ($reservation->status == 'borrowed') {
             $endTime = Carbon::parse($reservation->end_time);
+            
             if ($now->gt($endTime)) {
                 $daysLate = $now->diffInDays($endTime) ?: 1;
-                $reservation->penalty = $daysLate * 50000;
+                $reservation->penalty = $daysLate * 50000; 
                 $reservation->payment_status = 'unpaid';
                 $reservation->penalty_status = 'unpaid';
             }
+            
             $reservation->status = 'returned';
             $reservation->save();
             return response()->json(['success' => true, 'message' => "Check-out Berhasil!"]);
         }
 
-        return response()->json(['success' => false, 'message' => 'Status tidak valid.']);
+        return response()->json(['success' => false, 'message' => 'Status tidak valid untuk scan.']);
     }
 
     public function payPenalty(Request $request, $id)

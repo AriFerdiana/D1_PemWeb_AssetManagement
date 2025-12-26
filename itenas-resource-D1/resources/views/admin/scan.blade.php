@@ -3,8 +3,10 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-150px)]">
         
+        {{-- BAGIAN KIRI: KAMERA --}}
         <div class="lg:col-span-2 space-y-6">
             
+            {{-- CARD KAMERA --}}
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-card p-4 border border-gray-100 dark:border-gray-700 h-full flex flex-col">
                 <div class="flex justify-between items-center mb-4 px-2">
                     <h3 class="font-bold text-navy-800 dark:text-white flex items-center gap-2">
@@ -15,9 +17,14 @@
                     </span>
                 </div>
 
-                <div class="relative flex-1 bg-black rounded-xl overflow-hidden flex items-center justify-center group max-h-[500px]">
-                    <div id="reader" class="w-full h-full"></div>
+                {{-- AREA KAMERA (WRAPPER) --}}
+                {{-- Kita set tinggi container di sini agar tidak 'loncat' saat kamera nyala --}}
+                <div class="relative w-full rounded-xl overflow-hidden flex items-center justify-center bg-black group" style="height: 600px;">
                     
+                    {{-- ID READER --}}
+                    <div id="reader"></div>
+                    
+                    {{-- Placeholder saat kamera mati --}}
                     <div id="camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 text-white z-10">
                         <i class="fas fa-qrcode text-6xl text-gray-700 mb-4"></i>
                         <p class="text-gray-400 text-sm">Pastikan pencahayaan cukup</p>
@@ -35,8 +42,10 @@
             </div>
         </div>
 
+        {{-- BAGIAN KANAN: INPUT MANUAL & HASIL --}}
         <div class="space-y-6 flex flex-col">
             
+            {{-- Form Manual --}}
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-card p-6 border border-gray-100 dark:border-gray-700">
                 <h3 class="font-bold text-navy-800 dark:text-white mb-4 flex items-center gap-2">
                     <i class="fas fa-keyboard text-orange-500"></i> Input Manual
@@ -54,6 +63,7 @@
                 </form>
             </div>
 
+            {{-- Hasil Scan --}}
             <div class="flex-1 bg-white dark:bg-gray-800 rounded-2xl shadow-card p-6 border border-gray-100 dark:border-gray-700 flex flex-col">
                 <h3 class="font-bold text-navy-800 dark:text-white mb-4 flex items-center gap-2">
                     <i class="fas fa-clipboard-check text-blue-500"></i> Hasil Scan
@@ -93,15 +103,21 @@
         </div>
     </div>
 
+    {{-- LIBRARY & CSS KHUSUS --}}
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
     <style>
+        /* CSS AGAR VIDEO PAS DENGAN CONTAINER 300PX */
         #reader {
             width: 100%;
-            height: 100%;
+            height: 100%; /* Ikuti tinggi container (300px) */
+            border-radius: 0.75rem;
+            overflow: hidden;
         }
         #reader video {
-            object-fit: cover; /* Video full screen tanpa gepeng */
+            width: 100% !important;
+            height: 100% !important; 
+            object-fit: cover !important; /* Mencegah gepeng, video akan di-crop agar penuh */
             border-radius: 0.75rem;
         }
     </style>
@@ -117,12 +133,12 @@
 
             html5QrCode = new Html5Qrcode("reader");
             
-            // === CONFIG BARU: KOTAK LEBIH BESAR ===
             const config = { 
                 fps: 10, 
-                // Ukuran kotak scan: Lebar 450px, Tinggi 350px (Biar pas di Laptop)
-                qrbox: { width: 450, height: 350 }, 
-                aspectRatio: 1.333333 // 4:3 Ratio standard webcam
+                // PERBAIKAN 1: Ukuran Area Scan (Putih) DIPERBESAR
+                qrbox: { width: 350, height: 350 }, 
+                // PERBAIKAN 2: Rasio kotak agar tidak gepeng
+                aspectRatio:2.0 
             };
 
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)

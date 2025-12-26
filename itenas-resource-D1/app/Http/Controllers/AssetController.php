@@ -13,8 +13,8 @@ use App\Http\Requests\UpdateAssetRequest; // Request Validasi Edit
 use Exception; // Untuk Error Handling (Try-Catch)
 
 // --- TAMBAHAN BARU UNTUK EXCEL ---
+use App\Imports\AssetsImport;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\AssetImport;
 // ---------------------------------
 
 class AssetController extends Controller
@@ -76,26 +76,28 @@ class AssetController extends Controller
     /**
      * Menyimpan data baru ke Database
      */
-    public function store(StoreAssetRequest $request)
-    {
-        try {
-            $data = $request->validated();
+    public function store(Request $request) 
+{
+    $request->validate([
+        'name' => 'required',
+        'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Validasi file
+        // ... validasi lain ...
+    ]);
 
-            // Logika Upload Gambar
-            if ($request->hasFile('image')) {
-                $data['image'] = $request->file('image')->store('assets', 'public');
-            }
+    $data = $request->all();
 
-            Asset::create($data);
-
-            return redirect()->route('admin.assets.index')
-                             ->with('success', 'Barang berhasil ditambahkan!');
-
-        } catch (Exception $e) {
-            return back()->withInput()
-                         ->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
-        }
+    // LOGIKA UPLOAD FILE YANG BENAR
+    if ($request->hasFile('image')) {
+        // Upload ke folder 'storage/app/public/assets'
+        // Hasilnya path seperti: "assets/namafileunik.jpg"
+        $path = $request->file('image')->store('assets', 'public'); 
+        $data['image'] = $path;
     }
+
+    Asset::create($data);
+
+    return redirect()->route('assets.index')->with('success', 'Aset berhasil ditambah');
+}
 
     /**
      * Menampilkan detail aset
@@ -121,30 +123,26 @@ class AssetController extends Controller
      * Mengupdate data barang
      */
     public function update(UpdateAssetRequest $request, Asset $asset)
-    {
-        try {
-            $data = $request->validated();
+{
+    $data = $request->validated();
 
-            // Logika Update Gambar
-            if ($request->hasFile('image')) {
-                // Hapus gambar lama
-                if ($asset->image && Storage::disk('public')->exists($asset->image)) {
-                    Storage::disk('public')->delete($asset->image);
-                }
-                // Upload gambar baru
-                $data['image'] = $request->file('image')->store('assets', 'public');
-            }
-
-            $asset->update($data);
-
-            return redirect()->route('admin.assets.index')
-                             ->with('success', 'Data aset berhasil diperbarui!');
-
-        } catch (Exception $e) {
-            return back()->withInput()
-                         ->with('error', 'Gagal update: ' . $e->getMessage());
+    // --- BAGIAN YANG HARUS DIPERBAIKI ---
+    if ($request->hasFile('image')) {
+        // 1. Cek apakah ada gambar lama, jika ada HAPUS
+        if ($asset->image && Storage::disk('public')->exists($asset->image)) {
+            Storage::disk('public')->delete($asset->image);
         }
+
+        // 2. Upload gambar baru
+        $path = $request->file('image')->store('assets', 'public');
+        $data['image'] = $path;
     }
+    // ------------------------------------
+
+    $asset->update($data);
+
+    return redirect()->route('assets.index')->with('success', 'Aset berhasil diperbarui');
+}
 
     /**
      * Menghapus barang
@@ -171,24 +169,21 @@ class AssetController extends Controller
      * --- FITUR BARU ---
      * Import Data dari Excel
      */
-    public function import(Request $request)
-    {
-        // 1. Validasi File
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv|max:2048', // Maks 2MB
-        ]);
 
-        try {
-            // 2. Eksekusi Import menggunakan Class Import yang sudah dibuat
-            Excel::import(new AssetImport, $request->file('file'));
+public function import(Request $request)
+{
+    $request->validate([
+        'file' => 'required|mimes:xlsx,xls,csv|max:2048'
+    ]);
 
-            // 3. Sukses
-            return redirect()->route('admin.assets.index')
-                             ->with('success', 'Data aset berhasil diimpor dari Excel!');
-
-        } catch (Exception $e) {
-            // 4. Gagal (Misal format excel salah)
-            return back()->with('error', 'Gagal import: ' . $e->getMessage());
-        }
+    try {
+        Excel::import(new AssetsImport, $request->file('file'));
+        return back()->with('success', 'Data aset berhasil diimpor!');
+    } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+        $failures = $e->failures();
+        return back()->with('error', 'Gagal import! Cek format data baris ke-' . $failures[0]->row());
+    } catch (\Exception $e) {
+        return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
     }
+}
 }

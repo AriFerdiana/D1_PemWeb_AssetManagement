@@ -59,7 +59,6 @@
                 <p class="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Sirkulasi & Admin</p>
             </div>
 
-            {{-- 🔥 PERBAIKAN: LINK INI SEKARANG MENGARAH KE ADMIN 🔥 --}}
             <a href="{{ route('admin.reservations.index') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 {{ request()->routeIs('admin.reservations.index') ? 'bg-teal-600 text-white shadow-md' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
                 <i class="fas fa-exchange-alt w-5 text-center"></i>
                 <span class="font-medium text-sm">Data Transaksi</span>
@@ -88,6 +87,11 @@
 
             <a href="{{ route('admin.categories.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 {{ request()->routeIs('admin.categories.*') ? 'bg-navy-700 text-white' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
                 <i class="fas fa-tags w-5 text-center"></i> <span class="text-sm">Kategori Aset</span>
+            </a>
+
+            {{-- MENU MAINTENANCE (Ditambahkan Disini) --}}
+            <a href="{{ route('admin.maintenances.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 {{ request()->routeIs('admin.maintenances.*') ? 'bg-navy-700 text-white' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
+                <i class="fas fa-tools w-5 text-center"></i> <span class="text-sm">Log Perawatan</span>
             </a>
 
             <a href="{{ route('admin.users.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 {{ request()->routeIs('admin.users.*') ? 'bg-navy-700 text-white' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">

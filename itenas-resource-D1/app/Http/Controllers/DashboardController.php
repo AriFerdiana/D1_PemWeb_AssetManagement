@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Models\ReservationItem;
+use App\Models\Category; // Pastikan Model Category di-import
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -14,92 +15,97 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        // ==========================
         // 1. STATISTIK KARTU (Cards)
+        // ==========================
         $totalAssets = Asset::count();
-        $totalUsers = User::role('Mahasiswa')->count();
+        $totalUsers = User::count();
         $totalReservations = Reservation::count();
         $activeLoans = Reservation::where('status', 'borrowed')->count();
+        $totalMaintenance = Asset::where('status', 'maintenance')->count();
 
-        // 2. STATISTIK KEUANGAN (Data Baru)
-        // Total Pendapatan Denda Bulan Ini (Hanya yang sudah PAID)
-        $monthlyRevenue = Reservation::where('payment_status', 'paid')
-            ->whereMonth('updated_at', date('m'))
-            ->whereYear('updated_at', date('Y'))
-            ->sum('penalty');
+        // ==========================
+        // 2. DATA UNTUK 7 GRAFIK
+        // ==========================
 
-        // Status Pembayaran Denda (Unpaid vs Paid) untuk Pie Chart
-        $penaltyStats = [
-            'paid' => Reservation::where('payment_status', 'paid')->count(),
-            'unpaid' => Reservation::where('payment_status', 'unpaid')->count(),
-        ];
+        // --- GRAFIK 1: Tren Peminjaman per Bulan (Line Chart) ---
+        $monthlyStats = Reservation::select(
+            DB::raw('MONTH(created_at) as month'),
+            DB::raw('COUNT(*) as total')
+        )
+        ->whereYear('created_at', date('Y'))
+        ->groupBy('month')
+        ->orderBy('month')
+        ->pluck('total', 'month')
+        ->toArray();
 
-        // Top 5 Aset Paling Banyak Menghasilkan Denda (Sering Telat)
-        $lateAssets = ReservationItem::join('assets', 'reservation_items.asset_id', '=', 'assets.id')
-            ->join('reservations', 'reservation_items.reservation_id', '=', 'reservations.id')
-            ->where('reservations.penalty', '>', 0)
-            ->select('assets.name', DB::raw('SUM(reservations.penalty) as total_penalty'))
-            ->groupBy('assets.name')
-            ->orderByDesc('total_penalty')
-            ->limit(5)
-            ->get();
+        $monthlyData = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $monthlyData[] = $monthlyStats[$i] ?? 0;
+        }
 
-        // 3. DATA UNTUK GRAFIK (Chart.js)
-        
-        // Grafik 1: Status Transaksi (Pie Chart)
-        $reservationStats = Reservation::select('status', DB::raw('count(*) as total'))
+        // --- GRAFIK 2: Status Transaksi (Doughnut Chart) ---
+        $statusRaw = Reservation::select('status', DB::raw('count(*) as total'))
             ->groupBy('status')
-            ->pluck('total', 'status')
-            ->toArray();
+            ->get();
+        $statusLabels = $statusRaw->pluck('status');
+        $statusData = $statusRaw->pluck('total');
 
-        // Grafik 2: Peminjaman per Prodi (Bar Chart)
+        // --- GRAFIK 3: Kondisi Aset (Pie Chart) ---
+        $conditionRaw = Asset::select('status', DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->get();
+        $conditionLabels = $conditionRaw->pluck('status');
+        $conditionData = $conditionRaw->pluck('total');
+
+        // --- GRAFIK 4: Komposisi Kategori (Pie Chart) - NEW! ---
+        $categoryStats = Asset::join('categories', 'assets.category_id', '=', 'categories.id')
+            ->select('categories.name', DB::raw('count(*) as total'))
+            ->groupBy('categories.name')
+            ->orderByDesc('total')
+            ->limit(5) // Top 5 Kategori
+            ->get();
+        $categoryLabels = $categoryStats->pluck('name');
+        $categoryData = $categoryStats->pluck('total');
+
+        // --- GRAFIK 5: Kepatuhan Pengembalian (Doughnut Chart) - NEW! ---
+        // Hitung yang kena denda vs yang lunas/tepat waktu
+        $lateCount = Reservation::where('penalty', '>', 0)->count();
+        $onTimeCount = Reservation::where('status', 'returned')->where('penalty', 0)->count();
+        
+        $complianceLabels = ['Tepat Waktu', 'Terlambat'];
+        $complianceData = [$onTimeCount, $lateCount];
+
+        // --- GRAFIK 6: Peminjaman per Prodi (Bar Chart) ---
         $prodiStats = Reservation::join('users', 'reservations.user_id', '=', 'users.id')
             ->join('prodis', 'users.prodi_id', '=', 'prodis.id')
             ->select('prodis.code', DB::raw('count(*) as total'))
             ->groupBy('prodis.code')
             ->orderByDesc('total')
             ->limit(5)
-            ->pluck('total', 'prodis.code')
-            ->toArray();
+            ->get();
+        $prodiLabels = $prodiStats->pluck('code');
+        $prodiData = $prodiStats->pluck('total');
 
-        // Grafik 3: Top 5 Aset Terlaris
-        $topAssetsRaw = ReservationItem::select('asset_id', DB::raw('SUM(quantity) as total'))
+        // --- GRAFIK 7: Top 5 Aset Terlaris (Horizontal Bar Chart) ---
+        $topAssets = ReservationItem::select('asset_id', DB::raw('count(*) as total'))
             ->with('asset')
             ->groupBy('asset_id')
             ->orderByDesc('total')
-            ->take(5)
+            ->limit(5)
             ->get();
-
-        $assetLabels = $topAssetsRaw->map(fn($item) => $item->asset->name ?? 'N/A');
-        $assetData = $topAssetsRaw->map(fn($item) => $item->total);
-
-        // Grafik 4: Tren Peminjaman per Bulan (Tahun Berjalan)
-        $monthlyStats = Reservation::select(
-                DB::raw('MONTH(created_at) as month'),
-                DB::raw('COUNT(*) as total')
-            )
-            ->whereYear('created_at', date('Y'))
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get();
-
-        $monthlyData = array_fill(0, 12, 0); 
-        foreach ($monthlyStats as $stat) {
-            $monthlyData[$stat->month - 1] = $stat->total;
-        }
+        $topAssetLabels = $topAssets->map(fn($i) => $i->asset->name ?? 'Unknown');
+        $topAssetData = $topAssets->pluck('total');
 
         return view('dashboard', compact(
-            'totalAssets', 
-            'totalUsers', 
-            'totalReservations', 
-            'activeLoans',
-            'reservationStats',
-            'prodiStats',
-            'assetLabels',
-            'assetData',
-            'monthlyData',
-            'monthlyRevenue',
-            'penaltyStats',
-            'lateAssets'
+            'totalAssets', 'totalUsers', 'totalReservations', 'activeLoans', 'totalMaintenance',
+            'monthlyData', 
+            'statusLabels', 'statusData',
+            'conditionLabels', 'conditionData',
+            'categoryLabels', 'categoryData', // Data Kategori
+            'complianceLabels', 'complianceData', // Data Kepatuhan
+            'prodiLabels', 'prodiData',
+            'topAssetLabels', 'topAssetData'
         ));
     }
 }

@@ -1,121 +1,130 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"
-      x-data="{ 
-          darkMode: localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches),
-          toggleTheme() {
-              this.darkMode = !this.darkMode;
-              localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
-              if (this.darkMode) {
-                  document.documentElement.classList.add('dark');
-              } else {
-                  document.documentElement.classList.remove('dark');
-              }
-          }
-      }"
-      x-init="$watch('darkMode', val => val ? document.documentElement.classList.add('dark') : document.documentElement.classList.remove('dark')); if(darkMode) document.documentElement.classList.add('dark');"
-      :class="{ 'dark': darkMode }">
-      
+<html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>ITENAS Resource Center</title>
 
-    <title>{{ config('app.name', 'ITENAS Asset') }}</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-
-<body class="font-sans antialiased bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <div x-data="{ sidebarOpen: false }" class="flex h-screen overflow-hidden">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] },
+                    colors: { itenas: { primary: '#F97316', dark: '#C2410C' } }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* PAKSA SEMUA WARNA HIJAU LAMA MENJADI ORANYE ITENAS */
+        .bg-teal-500, .bg-teal-600, .bg-emerald-500, .bg-emerald-600 { background-color: #F97316 !important; }
+        .text-teal-600, .text-emerald-600 { color: #F97316 !important; }
+        .border-teal-500, .border-emerald-500 { border-color: #F97316 !important; }
+        .hover\:bg-teal-600:hover { background-color: #C2410C !important; }
         
-        @include('layouts.sidebar')
+        /* Style tambahan untuk Sidebar Active */
+        .sidebar-active { background-color: white !important; color: #F97316 !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); font-weight: 700; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans antialiased text-gray-900">
+    <div class="flex h-screen overflow-hidden">
+        
+        <aside class="w-72 fixed inset-y-0 left-0 bg-gradient-to-b from-orange-600 to-orange-800 text-white shadow-2xl overflow-y-auto z-50 flex flex-col">
+            <div class="h-24 flex items-center justify-start px-6 border-b border-white/20 shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-white p-1.5 rounded-lg shadow-sm">
+                        <img src="https://uat-web.itenas.ac.id/assets/images/logo-7.png" alt="Logo" class="h-8 w-auto">
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold leading-tight">ITENAS</h1>
+                        <p class="text-[10px] text-orange-100 opacity-90 uppercase tracking-widest font-semibold">Resource Center</p>
+                    </div>
+                </div>
+            </div>
 
-        <div x-show="sidebarOpen" @click="sidebarOpen = false" x-cloak class="fixed inset-0 z-20 bg-black bg-opacity-50 md:hidden transition-opacity"></div>
+            <nav class="mt-6 px-4 space-y-1 flex-grow">
+                @hasrole('Superadmin|Laboran')
+                    <p class="px-4 text-[10px] font-bold text-orange-200 uppercase mb-2">Utama</p>
+                    <a href="{{ route('dashboard') }}" class="flex items-center px-4 py-3 rounded-xl transition {{ request()->routeIs('dashboard') ? 'sidebar-active' : 'hover:bg-white/10 text-white' }}">
+                        <i class="fas fa-th-large w-8 text-center"></i> Dashboard
+                    </a>
 
-        <div class="flex-1 flex flex-col overflow-hidden relative">
-            
-            <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 z-10 transition-colors duration-300">
-                
-                <div class="flex items-center gap-4">
-                    <button @click="sidebarOpen = !sidebarOpen" class="md:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white focus:outline-none">
-                        <i class="fas fa-bars text-xl"></i>
+                    <p class="px-4 text-[10px] font-bold text-orange-200 uppercase mt-4 mb-2">Sirkulasi</p>
+                    <a href="{{ route('admin.reservations.index') }}" class="flex items-center px-4 py-3 rounded-xl transition {{ request()->routeIs('admin.reservations.*') ? 'sidebar-active' : 'hover:bg-white/10 text-white' }}">
+                        <i class="fas fa-exchange-alt w-8 text-center"></i> Data Transaksi
+                    </a>
+                    <a href="{{ route('admin.scan.index') }}" class="flex items-center px-4 py-3 rounded-xl transition {{ request()->routeIs('admin.scan.*') ? 'sidebar-active' : 'hover:bg-white/10 text-white' }}">
+                        <i class="fas fa-qrcode w-8 text-center"></i> Scan QR Code
+                    </a>
+
+                    <p class="px-4 text-[10px] font-bold text-orange-200 uppercase mt-4 mb-2">Master Data</p>
+                    <a href="{{ route('admin.assets.index') }}" class="flex items-center px-4 py-3 rounded-xl transition {{ request()->routeIs('admin.assets.*') ? 'sidebar-active' : 'hover:bg-white/10 text-white' }}">
+                        <i class="fas fa-box w-8 text-center"></i> Data Aset
+                    </a>
+                    <a href="{{ route('admin.labs.index') }}" class="flex items-center px-4 py-3 rounded-xl transition {{ request()->routeIs('admin.labs.*') ? 'sidebar-active' : 'hover:bg-white/10 text-white' }}">
+                        <i class="fas fa-flask w-8 text-center"></i> Data Lab
+                    </a>
+                    <a href="{{ route('admin.prodis.index') }}" class="flex items-center px-4 py-3 rounded-xl transition {{ request()->routeIs('admin.prodis.*') ? 'sidebar-active' : 'hover:bg-white/10 text-white' }}">
+                        <i class="fas fa-university w-8 text-center"></i> Data Prodi
+                    </a>
+                    <a href="{{ route('admin.categories.index') }}" class="flex items-center px-4 py-3 rounded-xl transition {{ request()->routeIs('admin.categories.*') ? 'sidebar-active' : 'hover:bg-white/10 text-white' }}">
+                        <i class="fas fa-tags w-8 text-center"></i> Kategori Aset
+                    </a>
+                    <a href="{{ route('admin.maintenances.index') }}" class="flex items-center px-4 py-3 rounded-xl transition {{ request()->routeIs('admin.maintenances.*') ? 'sidebar-active' : 'hover:bg-white/10 text-white' }}">
+                        <i class="fas fa-tools w-8 text-center"></i> Log Perawatan
+                    </a>
+                    <a href="{{ route('admin.users.index') }}" class="flex items-center px-4 py-3 rounded-xl transition {{ request()->routeIs('admin.users.*') ? 'sidebar-active' : 'hover:bg-white/10 text-white' }}">
+                        <i class="fas fa-users w-8 text-center"></i> Data Pengguna
+                    </a>
+                @else
+                    <a href="{{ route('dashboard') }}" class="flex items-center px-4 py-3 rounded-xl transition {{ request()->routeIs('dashboard') ? 'sidebar-active' : 'hover:bg-white/10 text-white' }}">
+                        <i class="fas fa-home w-8 text-center"></i> Beranda
+                    </a>
+                    <a href="{{ route('assets.index') }}" class="flex items-center px-4 py-3 rounded-xl transition {{ request()->routeIs('assets.*') ? 'sidebar-active' : 'hover:bg-white/10 text-white' }}">
+                        <i class="fas fa-search w-8 text-center"></i> Pinjam Alat
+                    </a>
+                    <a href="{{ route('reservations.assets') }}" class="flex items-center px-4 py-3 rounded-xl transition {{ request()->routeIs('reservations.*') ? 'sidebar-active' : 'hover:bg-white/10 text-white' }}">
+                        <i class="fas fa-list w-8 text-center"></i> Status Saya
+                    </a>
+                @endhasrole
+            </nav>
+
+            <div class="p-4 border-t border-white/10">
+                <form action="{{ route('logout') }}" method="POST">
+                    @csrf
+                    <button type="submit" class="w-full flex items-center px-4 py-3 text-white hover:bg-red-500 rounded-xl transition font-medium">
+                        <i class="fas fa-sign-out-alt w-8 text-center"></i> Logout
                     </button>
-                    <h2 class="text-xl font-bold text-navy-800 dark:text-white leading-tight">
-                        @yield('header', 'Dashboard') 
+                </form>
+            </div>
+        </aside>
+
+        <div class="flex-1 ml-72 flex flex-col h-screen overflow-y-auto bg-gray-50">
+            <header class="bg-white shadow-sm h-20 flex items-center justify-between px-8 sticky top-0 z-40">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800 uppercase tracking-tight">
+                        @yield('header', 'Panel Sistem')
                     </h2>
                 </div>
-
-                <div class="flex items-center space-x-3 md:space-x-4">
-                    
-                    <div class="hidden md:block relative">
-                        <form action="{{ route('assets.index') }}" method="GET">
-                            <input type="text" name="search" placeholder="Cari aset..." class="pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 border-none rounded-full text-sm focus:ring-2 focus:ring-teal-500 w-64 text-gray-700 dark:text-gray-200 placeholder-gray-400 transition-colors">
-                            <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
-                        </form>
+                
+                <div class="flex items-center space-x-6">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-bold text-gray-800 leading-none">{{ Auth::user()->name }}</p>
+                        <p class="text-[10px] text-orange-600 font-bold uppercase mt-1">
+                            {{ Auth::user()->roles->first()->name ?? 'User' }}
+                        </p>
                     </div>
-                    
-                    <button @click="toggleTheme()" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transition transform active:scale-95">
-                        <i class="fas fa-moon" x-show="!darkMode"></i>
-                        <i class="fas fa-sun text-yellow-400" x-show="darkMode" x-cloak></i>
-                    </button>
-
-                    <div class="relative" x-data="{ open: false }">
-                        <button @click="open = !open" class="relative p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition focus:outline-none">
-                            <i class="fas fa-bell text-lg"></i>
-                            <span class="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-gray-800"></span>
-                        </button>
-                        <div x-show="open" @click.away="open = false" x-cloak class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 py-2 z-50">
-                            <div class="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-                                <h3 class="text-sm font-bold text-gray-700 dark:text-white">Notifikasi</h3>
-                            </div>
-                            <div class="max-h-64 overflow-y-auto">
-                                <a href="#" class="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                    <p class="text-sm text-gray-800 dark:text-gray-200 font-medium">Sistem Siap</p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">Selamat datang di sistem manajemen aset.</p>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="relative ml-3" x-data="{ open: false }">
-                        <button @click="open = !open" class="flex items-center space-x-3 focus:outline-none">
-                            <div class="text-right hidden md:block">
-                                <p class="text-sm font-bold text-gray-700 dark:text-gray-200">{{ Auth::user()->name }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ Auth::user()->getRoleNames()->first() ?? 'User' }}</p>
-                            </div>
-                            <div class="h-9 w-9 rounded-full bg-teal-100 dark:bg-teal-900 flex items-center justify-center text-teal-700 dark:text-teal-300 font-bold border border-teal-200 dark:border-teal-700">
-                                {{ substr(Auth::user()->name, 0, 1) }}
-                            </div>
-                        </button>
-                        <div x-show="open" @click.away="open = false" x-cloak class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 py-1 z-50">
-                            <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-user-circle mr-2 w-4"></i> Edit Profile
-                            </a>
-                            <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
-                                <a href="{{ route('logout') }}" onclick="event.preventDefault(); this.closest('form').submit();" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30">
-                                    <i class="fas fa-sign-out-alt mr-2 w-4"></i> Log Out
-                                </a>
-                            </form>
-                        </div>
-                    </div>
-
+                    <img class="h-10 w-10 rounded-full border-2 border-orange-500" src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}&background=F97316&color=fff">
                 </div>
             </header>
 
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300">
-                @if(session('success'))
-                    <div class="mb-4 p-4 bg-green-100 dark:bg-green-900/50 border-l-4 border-green-500 text-green-700 dark:text-green-300 rounded shadow-sm flex justify-between items-center" x-data="{ show: true }" x-show="show">
-                        <div class="flex items-center"><i class="fas fa-check-circle mr-2"></i> {{ session('success') }}</div>
-                        <button @click="show = false"><i class="fas fa-times"></i></button>
-                    </div>
-                @endif
+            <main class="p-8">
                 {{ $slot }}
             </main>
         </div>

@@ -15,17 +15,26 @@ class AdminUserController extends Controller
      * Menampilkan daftar user
      */
     public function index(Request $request)
-    {
-        $query = User::with(['prodi', 'roles']); // Eager load roles juga
+{
+    $query = User::with('roles'); // Pastikan load relasi roles (Spatie)
 
-        if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%');
-        }
+    // 1. Search (Nama atau Email)
+    $query->when($request->search, function ($q) use ($request) {
+        $q->where('name', 'like', '%' . $request->search . '%')
+          ->orWhere('email', 'like', '%' . $request->search . '%');
+    });
 
-        $users = $query->latest()->paginate(10);
-        return view('admin.users.index', compact('users'));
-    }
+    // 2. Filter Role (Jika pakai Spatie)
+    $query->when($request->role, function ($q) use ($request) {
+        $q->whereHas('roles', function ($r) use ($request) {
+            $r->where('name', $request->role);
+        });
+    });
+
+    $users = $query->latest()->paginate(10)->withQueryString();
+
+    return view('admin.users.index', compact('users'));
+}
 
     /**
      * Form Tambah User

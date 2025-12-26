@@ -3,7 +3,7 @@
 use App\Http\Controllers\Auth\SocialiteController; 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReservationController;
-use App\Http\Controllers\AssetController; // Controller UTAMA Aset
+use App\Http\Controllers\AssetController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\AdminReservationController; 
@@ -19,9 +19,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// ROUTE DASHBOARD
+// ROUTE DASHBOARD (Kita pasang log.aktivitas disini)
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'log.aktivitas']) // <--- TAMBAHAN LOG
     ->name('dashboard');
 
 // Route Social Login
@@ -31,7 +31,9 @@ Route::get('auth/{provider}/callback', [SocialiteController::class, 'handleProvi
 // ==========================================
 // GROUP 1: ROUTE MAHASISWA / UMUM
 // ==========================================
-Route::middleware('auth')->group(function () {
+// Kita tambahkan 'log.aktivitas' agar kegiatan mahasiswa tercatat
+Route::middleware(['auth', 'log.aktivitas'])->group(function () {
+    
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -62,14 +64,15 @@ Route::middleware('auth')->group(function () {
 // ==========================================
 
 // A. Route Export/Import & Custom Admin
-Route::middleware(['auth', 'role:Superadmin|Laboran'])->prefix('admin')->group(function () {
+Route::middleware(['auth', 'role:Superadmin|Laboran', 'log.aktivitas'])->prefix('admin')->group(function () {
     
     // --- FITUR IMPORT YANG DIMINTA ---
     Route::post('assets/import', [AssetController::class, 'import'])->name('assets.import');
 });
 
-// B. Route Resource Admin (Otomatis pakai nama 'admin.')
-Route::middleware(['auth', 'role:Superadmin|Laboran'])->prefix('admin')->name('admin.')->group(function () {
+// B. Route Resource Admin
+// Kita tambahkan 'log.aktivitas' disini juga untuk memantau Admin
+Route::middleware(['auth', 'role:Superadmin|Laboran', 'log.aktivitas'])->prefix('admin')->name('admin.')->group(function () {
     
     // 1. CRUD Assets
     Route::resource('assets', AssetController::class);
@@ -103,7 +106,7 @@ Route::middleware(['auth', 'role:Superadmin|Laboran'])->prefix('admin')->name('a
     Route::resource('categories', \App\Http\Controllers\AdminCategoryController::class);
 
     // Log Maintenance
-    Route::resource('maintenances', \App\Http\Controllers\AdminMaintenanceController::class)->except(['edit', 'update']);
+    Route::resource('maintenances', \App\Http\Controllers\AdminMaintenanceController::class);
 });
 
 require __DIR__.'/auth.php';
