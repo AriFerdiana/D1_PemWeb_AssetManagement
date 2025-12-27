@@ -5,37 +5,40 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Prodi;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth; // <--- TAMBAHKAN BARIS INI
 use Spatie\Permission\Models\Role;
 
 class AdminUserController extends Controller
 {
     /**
-     * Menampilkan daftar user
+     * Menampilkan daftar user (Difilter per Prodi untuk Laboran)
      */
     public function index(Request $request)
-{
-    $query = User::with('roles'); // Pastikan load relasi roles (Spatie)
+    {
+        $user = Auth::user(); // Sekarang ini tidak akan error lagi
+        $query = User::with(['prodi', 'roles']);
 
-    // 1. Search (Nama atau Email)
-    $query->when($request->search, function ($q) use ($request) {
-        $q->where('name', 'like', '%' . $request->search . '%')
-          ->orWhere('email', 'like', '%' . $request->search . '%');
-    });
+        // LOGIKA SILO DATA: Laboran hanya melihat user di prodinya sendiri
+        if ($user->hasRole('Laboran')) {
+            $query->where('prodi_id', $user->prodi_id)
+                  ->whereDoesntHave('roles', fn($q) => $q->where('name', 'Superadmin'));
+        }
 
-    // 2. Filter Role (Jika pakai Spatie)
-    $query->when($request->role, function ($q) use ($request) {
-        $q->whereHas('roles', function ($r) use ($request) {
-            $r->where('name', $request->role);
-        });
-    });
+        // Fitur Pencarian
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('nim', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
 
-    $users = $query->latest()->paginate(10)->withQueryString();
-
-    return view('admin.users.index', compact('users'));
-}
-
+        $users = $query->latest()->paginate(10)->withQueryString();
+        
+        return view('admin.users.index', compact('users'));
+    }
     /**
      * Form Tambah User
      */
@@ -79,15 +82,36 @@ class AdminUserController extends Controller
      * Form Edit User
      * Menggunakan Route Model Binding (User $user)
      */
-    public function edit(User $user)
-    {
-        // Tidak perlu findOrFail lagi karena Laravel otomatis mencarikan berdasarkan ID di URL
-        $prodis = Prodi::all();
-        $roles = Role::all();
+  public function edit($id)
+{
+    $currentUser = Auth::user();
+    $targetUser = User::findOrFail($id);
+
+    // LOGIKA PROTEKSI UNTUK LABORAN
+    if ($currentUser->hasRole('Laboran')) {
         
-        return view('admin.users.edit', compact('user', 'prodis', 'roles'));
+        // 1. Izinkan jika dia mengedit dirinya sendiri
+        if ($currentUser->id == $targetUser->id) {
+            // Lanjut ke view
+        } else {
+            // 2. Jika mengedit orang lain, pastikan prodi_id sama
+            // Gunakan (int) untuk memastikan tipe data integer agar perbandingan !== tidak gagal
+            if ((int)$targetUser->prodi_id !== (int)$currentUser->prodi_id) {
+                abort(403, 'ANDA HANYA BISA MENGELOLA PENGGUNA DARI PRODI ANDA SENDIRI.');
+            }
+
+            // 3. Jangan izinkan Laboran mengedit Superadmin
+            if ($targetUser->hasRole('Superadmin')) {
+                abort(403, 'LABORAN TIDAK MEMILIKI WEWENANG MENGUBAH DATA SUPERADMIN.');
+            }
+        }
     }
 
+    $prodis = Prodi::all();
+    $roles = Role::all();
+    
+    return view('admin.users.edit', compact('targetUser', 'prodis', 'roles'));
+}
     /**
      * Update User
      */

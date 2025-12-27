@@ -4,74 +4,88 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class Reservation extends Model
 {
     use HasFactory;
 
-    protected $table = 'reservations'; // Opsional, tapi bagus untuk memastikan nama tabel
+    protected $table = 'reservations';
 
-    // PERBAIKAN: Menambahkan kolom-kolom yang tadi kita pakai di Seeder & Controller
     protected $fillable = [
         'user_id',
-        'asset_id',         // ID Aset (Jika tipe = asset)
-        'lab_id',           // ID Lab (Jika tipe = room / booking)
+        'asset_id',
+        'lab_id',
         'transaction_code',
         'start_time',
         'end_time',
-        'status',           // pending, approved, borrowed, returned, rejected
-        'type',             // asset / room / booking
-        'purpose',          // Keperluan peminjaman
-        
-        // Bagian Denda & Penolakan
-        'rejection_note',   // Alasan penolakan
-        'penalty',          // Nominal denda (sesuai controller)
-        'penalty_amount',   // Cadangan jika database pakai nama ini
-        'penalty_status',   // paid / unpaid
-        
-        // Bagian Pembayaran
-        'payment_status',   // paid / unpaid
-        'payment_method',   // Cash / Transfer / QRIS
-        'proposal_file',    // Jika ada upload proposal
+        'status',
+        'type',
+        'purpose',
+        'rejection_note',
+        'penalty',
+        'penalty_status',
+        'payment_status',
+        'payment_method',
+        'proposal_file',
     ];
 
-    // Casting agar otomatis jadi Carbon Object (Bisa format tanggal)
     protected $casts = [
         'start_time' => 'datetime',
         'end_time'   => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'penalty'    => 'integer',
     ];
 
-    // === RELASI ===
+    // =========================================================================
+    // RELASI
+    // =========================================================================
 
-    // 1. Ke User (Peminjam)
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    // 2. Ke Asset (Jika peminjaman barang)
     public function asset()
     {
         return $this->belongsTo(Asset::class);
     }
 
-    // 3. Ke Lab (INI WAJIB ADA untuk perbaikan Controller tadi)
     public function lab()
     {
         return $this->belongsTo(Lab::class, 'lab_id');
     }
 
-    // 4. Relasi Item (Jika sistem keranjang)
     public function reservationItems()
     {
-        return $this->hasMany(ReservationItem::class);
+        return $this->hasMany(ReservationItem::class, 'reservation_id');
     }
 
-    // 5. Pembayaran (Opsional jika dipisah tabel)
-    public function payment()
+    // =========================================================================
+    // HELPER FUNCTIONS
+    // =========================================================================
+
+    /**
+     * Mengecek apakah peminjaman sudah melewati batas waktu (Overdue)
+     */
+    public function isOverdue()
     {
-        return $this->hasOne(Payment::class);
+        return $this->status === 'borrowed' && now()->gt($this->end_time);
+    }
+
+    /**
+     * Mendapatkan label warna status untuk UI
+     */
+    public function getStatusLabelAttribute()
+    {
+        return match ($this->status) {
+            'pending'  => 'bg-yellow-100 text-yellow-800',
+            'approved' => 'bg-blue-100 text-blue-800',
+            'borrowed' => 'bg-purple-100 text-purple-800',
+            'returned' => 'bg-green-100 text-green-800',
+            'rejected' => 'bg-red-100 text-red-800',
+            default    => 'bg-gray-100 text-gray-800',
+        };
     }
 }

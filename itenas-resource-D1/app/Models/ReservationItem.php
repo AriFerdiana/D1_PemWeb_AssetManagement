@@ -9,17 +9,15 @@ class ReservationItem extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = ['reservation_id', 'asset_id', 'quantity', 'note'];
 
-    // Relasi: Item ini milik Transaksi mana
     public function reservation()
     {
-        return $this->belongsTo(Reservation::class);
+        return $this->belongsTo(Reservation::class, 'reservation_id');
     }
 
-    // Relasi: Item ini merujuk ke Aset mana
     public function asset()
     {
-        return $this->belongsTo(Asset::class);
+        return $this->belongsTo(Asset::class, 'asset_id');
     }
 }

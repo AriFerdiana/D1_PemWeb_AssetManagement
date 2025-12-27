@@ -6,26 +6,64 @@ use App\Models\Asset;
 use App\Models\Category;
 use App\Models\Lab;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class AdminAssetController extends Controller
 {
-    // Index Admin
-    public function index()
-    {
-        $assets = Asset::with(['category', 'lab'])->latest()->paginate(10);
-        return view('admin.assets.index', compact('assets'));
+    public function index(Request $request)
+{
+    $user = Auth::user();
+    
+    // 1. AMBIL DATA KATEGORI (Solusi untuk Error Anda)
+    $categories = Category::all(); 
+
+    // 2. QUERY DASAR ASET
+    $query = Asset::with(['category', 'lab']);
+
+    // 3. FILTER PRODI: Laboran hanya melihat aset milik prodinya
+    if ($user->hasRole('Laboran')) {
+        $query->whereHas('lab', function($q) use ($user) {
+            $q->where('prodi_id', $user->prodi_id);
+        });
     }
 
-    // Create Form
+    // 4. FILTER PENCARIAN (Search)
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('code', 'like', "%{$search}%");
+        });
+    }
+
+    // 5. FILTER KATEGORI (Dropdown)
+    if ($request->filled('category_id')) {
+        $query->where('category_id', $request->category_id);
+    }
+
+    // 6. AMBIL DATA DENGAN PAGINATION
+    $assets = $query->latest()->paginate(10)->withQueryString();
+
+    // 7. KIRIM VARIABEL KE VIEW
+    return view('admin.assets.index', compact('assets', 'categories'));
+}
+
     public function create()
     {
+        $user = Auth::user();
         $categories = Category::all();
-        $labs = Lab::all();
+        
+        // Filter Lab pilihan saat tambah aset (Laboran hanya bisa tambah ke Lab prodinya)
+        $labs = Lab::query();
+        if ($user->hasRole('Laboran')) {
+            $labs->where('prodi_id', $user->prodi_id);
+        }
+        $labs = $labs->get();
+
         return view('admin.assets.create', compact('categories', 'labs'));
     }
 
-    // Store Data
     public function store(Request $request)
     {
         $request->validate([
@@ -47,16 +85,26 @@ class AdminAssetController extends Controller
         return redirect()->route('admin.assets.index')->with('success', 'Aset berhasil ditambahkan');
     }
 
-    // Edit Form
     public function edit($id)
     {
+        $user = Auth::user();
         $asset = Asset::findOrFail($id);
+        
+        // Keamanan: Laboran tidak boleh edit aset prodi lain via URL
+        if ($user->hasRole('Laboran') && $asset->lab->prodi_id != $user->prodi_id) {
+            abort(403, 'Bukan wewenang prodi Anda.');
+        }
+
         $categories = Category::all();
-        $labs = Lab::all();
+        $labs = Lab::query();
+        if ($user->hasRole('Laboran')) {
+            $labs->where('prodi_id', $user->prodi_id);
+        }
+        $labs = $labs->get();
+
         return view('admin.assets.edit', compact('asset', 'categories', 'labs'));
     }
 
-    // Update Data
     public function update(Request $request, $id)
     {
         $asset = Asset::findOrFail($id);
@@ -71,29 +119,10 @@ class AdminAssetController extends Controller
         return redirect()->route('admin.assets.index')->with('success', 'Aset berhasil diupdate');
     }
 
-    // Delete Data
     public function destroy($id)
     {
         $asset = Asset::findOrFail($id);
         $asset->delete();
         return redirect()->route('admin.assets.index')->with('success', 'Aset dihapus');
-    }
-
-    // === FITUR EXPORT ===
-    public function export()
-    {
-        return response()->streamDownload(function () {
-            $assets = Asset::all();
-            echo "Nama,Kode,Stok\n";
-            foreach ($assets as $a) {
-                echo "{$a->name},{$a->code},{$a->stock}\n";
-            }
-        }, 'aset.csv');
-    }
-
-    // === FITUR IMPORT ===
-    public function import(Request $request)
-    {
-        return back()->with('success', 'Fitur Import Berhasil (Simulasi)');
     }
 }

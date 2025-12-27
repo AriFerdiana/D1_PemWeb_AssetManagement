@@ -6,91 +6,134 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Reservation;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
-use App\Http\Controllers\Controller; 
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 
 class AdminReservationController extends Controller
 {
     /**
-     * Menampilkan daftar transaksi dengan Filter Tanggal
+     * TAMPILAN DAFTAR TRANSAKSI
+     * Filter ketat memisahkan tipe aset dan ruangan agar tidak bocor antar prodi.
      */
     public function index(Request $request)
-    {
-        // 1. Mulai Query
-        $query = Reservation::with(['user', 'asset', 'lab']);
+{
+    $user = Auth::user();
+    // Eager loading sangat penting agar query filter prodi bisa berjalan cepat
+    $query = Reservation::with(['user', 'reservationItems.asset.lab', 'lab']);
 
-        // 2. LOGIKA SEARCH (Keyword)
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('transaction_code', 'like', "%{$search}%") 
-                  ->orWhereHas('user', function($u) use ($search) {
-                      $u->where('name', 'like', "%{$search}%");
-                  });
+    if ($user->hasRole('Laboran')) {
+        $prodiId = $user->prodi_id;
+
+        // KUNCI PERBAIKAN: Menggunakan scope where yang membungkus seluruh kondisi OR
+        $query->where(function($q) use ($prodiId) {
+            // Jalur 1: Khusus untuk peminjaman Ruangan
+            $q->where(function($sub) use ($prodiId) {
+                $sub->where('type', 'room')
+                    ->whereHas('lab', function($l) use ($prodiId) {
+                        $l->where('prodi_id', $prodiId);
+                    });
+            })
+            // Jalur 2: Khusus untuk peminjaman Aset
+            ->orWhere(function($sub) use ($prodiId) {
+                $sub->where('type', 'asset')
+                    ->whereHas('reservationItems.asset.lab', function($al) use ($prodiId) {
+                        $al->where('prodi_id', $prodiId);
+                    });
             });
-        }
-
-        // 3. LOGIKA FILTER STATUS
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // 4. LOGIKA FILTER TANGGAL (BARU)
-        // Jika user mengisi Tanggal Awal
-        if ($request->filled('start_date')) {
-            $query->whereDate('start_time', '>=', $request->start_date);
-        }
-        // Jika user mengisi Tanggal Akhir
-        if ($request->filled('end_date')) {
-            $query->whereDate('start_time', '<=', $request->end_date);
-        }
-
-        // 5. Ambil data (Pagination)
-        $reservations = $query->latest()->paginate(10)->withQueryString();
-
-        // Mengarah ke file view Anda
-        return view('reservations.index_assets', compact('reservations'));
+        });
+    } 
+    
+    // Logic untuk mahasiswa tetap sama
+    if ($user->hasRole('Mahasiswa')) {
+        $query->where('user_id', $user->id);
+        return view('reservations.index_rooms', [
+            'reservations' => $query->latest()->paginate(10)
+        ]);
     }
 
-    // --- FUNCTION LAIN TETAP SAMA ---
+    // Filter Pencarian
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function($q) use ($search) {
+            $q->where('transaction_code', 'like', "%{$search}%")
+              ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%"));
+        });
+    }
+
+    return view('admin.reservations.index', [
+        'reservations' => $query->latest()->paginate(10)->withQueryString()
+    ]);
+}
 
     public function scanIndex()
     {
         return view('admin.scan');
     }
 
+    /**
+     * PROSES SCAN QR CODE
+     * Menjamin Laboran tidak bisa memproses QR Code dari prodi lain.
+     */
     public function scanProcess(Request $request)
     {
-        $reservation = Reservation::where('transaction_code', $request->qr_code)->first();
+        $user = Auth::user();
+        $reservation = Reservation::with(['reservationItems.asset.lab', 'lab'])
+                                  ->where('transaction_code', $request->qr_code)
+                                  ->first();
 
         if (!$reservation) {
-            return response()->json(['success' => false, 'message' => 'Data tidak ditemukan!']);
+            return response()->json(['success' => false, 'message' => 'Data transaksi tidak ditemukan!']);
+        }
+
+        // VALIDASI KEAMANAN: Cek wewenang Prodi sebelum memproses scan
+        if ($user->hasRole('Laboran')) {
+            $prodiId = $user->prodi_id;
+            $authorized = false;
+
+            if ($reservation->type == 'room') {
+                $authorized = ($reservation->lab && $reservation->lab->prodi_id == $prodiId);
+            } else {
+                // Untuk aset, pastikan ada minimal satu item yang milik prodi laboran
+                $authorized = $reservation->reservationItems()->whereHas('asset.lab', function($q) use ($prodiId) {
+                    $q->where('prodi_id', $prodiId);
+                })->exists();
+            }
+
+            if (!$authorized) {
+                return response()->json(['success' => false, 'message' => 'Gagal! Transaksi ini milik prodi lain.']);
+            }
         }
 
         $now = Carbon::now();
 
+        // Alur Status: Approved -> Borrowed -> Returned
         if ($reservation->status == 'approved') {
             $reservation->update(['status' => 'borrowed']);
-            return response()->json(['success' => true, 'message' => "Check-in Berhasil!"]);
+            return response()->json(['success' => true, 'message' => "Check-in Berhasil! Barang/Ruangan sedang digunakan."]);
         } 
         
         if ($reservation->status == 'borrowed') {
             $endTime = Carbon::parse($reservation->end_time);
             
+            // Hitung Denda jika terlambat
             if ($now->gt($endTime)) {
                 $daysLate = $now->diffInDays($endTime) ?: 1;
-                $reservation->penalty = $daysLate * 50000; 
+                $reservation->penalty = $daysLate * 50000; // Contoh denda 50rb/hari
                 $reservation->payment_status = 'unpaid';
                 $reservation->penalty_status = 'unpaid';
             }
             
             $reservation->status = 'returned';
             $reservation->save();
-            return response()->json(['success' => true, 'message' => "Check-out Berhasil!"]);
+            return response()->json(['success' => true, 'message' => "Check-out Berhasil! Pengembalian telah dicatat."]);
         }
 
-        return response()->json(['success' => false, 'message' => 'Status tidak valid untuk scan.']);
+        return response()->json(['success' => false, 'message' => 'Status transaksi saat ini ('.$reservation->status.') tidak dapat diproses melalui scan.']);
     }
 
+    /**
+     * Update Status Pembayaran Denda
+     */
     public function payPenalty(Request $request, $id)
     {
         $reservation = Reservation::findOrFail($id);
@@ -99,26 +142,82 @@ class AdminReservationController extends Controller
             'penalty_status' => 'paid',
             'payment_method' => $request->payment_method ?? 'Cash'
         ]);
-        return back()->with('success', 'Denda telah dibayar.');
+        return back()->with('success', 'Pembayaran denda berhasil diverifikasi.');
     }
 
+    /**
+     * EXPORT PDF
+     * Laporan yang dihasilkan hanya berisi data milik prodi Laboran tersebut.
+     */
     public function exportPDF(Request $request)
     {
-        $month = $request->month ?? date('m');
-        $year = $request->year ?? date('Y');
+        $user = Auth::user();
+        $month = $request->input('month');
+        $year = $request->input('year', date('Y'));
 
-        $reservations = Reservation::with(['user', 'lab'])
-            ->whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
-            ->get();
+        $query = Reservation::with(['user', 'reservationItems.asset.lab', 'lab']);
 
-        $data = [
-            'title' => 'Laporan Peminjaman Lab Itenas',
-            'reservations' => $reservations,
-            'totalDenda' => $reservations->where('payment_status', 'paid')->sum('penalty')
-        ];
+        // Filter Silo Data untuk Laporan
+        if ($user->hasRole('Laboran')) {
+            $prodiId = $user->prodi_id;
+            $query->where(function($q) use ($prodiId) {
+                $q->where(function($sub) use ($prodiId) {
+                    $sub->where('type', 'room')->whereHas('lab', fn($l) => $l->where('prodi_id', $prodiId));
+                })->orWhere(function($sub) use ($prodiId) {
+                    $sub->where('type', 'asset')->whereHas('reservationItems.asset.lab', fn($al) => $al->where('prodi_id', $prodiId));
+                });
+            });
+        }
 
-        $pdf = Pdf::loadView('admin.reports.peminjaman_pdf', $data);
-        return $pdf->download('Laporan-Reservasi.pdf');
+        if ($month) $query->whereMonth('start_time', $month);
+        if ($year) $query->whereYear('start_time', $year);
+
+        $reservations = $query->latest()->get();
+        $totalDenda = $reservations->sum('penalty');
+        $monthName = $month ? Carbon::createFromDate(null, $month, 1)->translatedFormat('F') : 'Semua Bulan';
+        $date = now()->translatedFormat('d F Y');
+
+        $pdf = Pdf::loadView('admin.reports.peminjaman_pdf', compact('reservations', 'monthName', 'year', 'totalDenda', 'date'))
+                  ->setPaper('a4', 'landscape');
+
+        return $pdf->stream('laporan-peminjaman-' . time() . '.pdf');
+    }
+    /**
+ * MENYETUJUI ATAU MENOLAK TRANSAKSI (Silo Data Protected)
+ */
+public function updateStatus(Request $request, $id)
+    {
+        $user = Auth::user();
+        $reservation = Reservation::with(['reservationItems.asset.lab', 'lab'])->findOrFail($id);
+
+        if ($user->hasRole('Laboran')) {
+            $prodiId = $user->prodi_id;
+            $authorized = false;
+
+            if ($reservation->type == 'room') {
+                $authorized = ($reservation->lab && $reservation->lab->prodi_id == $prodiId);
+            } else {
+                $authorized = $reservation->reservationItems()->whereHas('asset.lab', function($q) use ($prodiId) {
+                    $q->where('prodi_id', $prodiId);
+                })->exists();
+            }
+
+            if (!$authorized) {
+                abort(403, 'Anda tidak memiliki wewenang untuk mengubah status transaksi prodi lain.');
+            }
+        }
+
+        $request->validate([
+            'status' => 'required|in:approved,rejected',
+            'rejection_note' => 'required_if:status,rejected|nullable|string|max:255'
+        ]);
+
+        $reservation->update([
+            'status' => $request->status,
+            'rejection_note' => $request->status == 'rejected' ? $request->rejection_note : null,
+        ]);
+
+        $pesan = $request->status == 'approved' ? 'Transaksi disetujui!' : 'Transaksi ditolak.';
+        return back()->with('success', $pesan);
     }
 }

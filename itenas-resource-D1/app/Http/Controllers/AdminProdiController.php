@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-
-use App\Http\Requests\StoreProdiRequest;
-use App\Http\Requests\UpdateProdiRequest;
 use App\Models\Prodi;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreProdiRequest;
+use App\Http\Requests\UpdateProdiRequest;
 
 class AdminProdiController extends Controller
 {
@@ -18,7 +17,7 @@ class AdminProdiController extends Controller
     {
         $query = Prodi::query();
 
-        // 1. LOGIKA SEARCH (Nama Prodi atau Kode)
+        // 1. LOGIKA SEARCH
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -28,13 +27,11 @@ class AdminProdiController extends Controller
         }
 
         // 2. LOGIKA FILTER (Fakultas)
-        // Pastikan nama kolom di DB Anda 'faculty' atau 'fakultas'
         if ($request->filled('faculty')) {
             $query->where('faculty', $request->faculty);
         }
 
         // 3. Sorting & Pagination
-        // Kita urutkan berdasarkan Fakultas, lalu Nama
         $prodis = $query->orderBy('faculty', 'asc')
                         ->orderBy('name', 'asc')
                         ->paginate(10)
@@ -43,8 +40,6 @@ class AdminProdiController extends Controller
         return view('admin.prodis.index', compact('prodis'));
     }
 
-    // --- FUNCTION LAIN (Create, Store, Edit, Update, Destroy) BIARKAN TETAP ---
-    
     public function create()
     {
         return view('admin.prodis.create');
@@ -52,11 +47,7 @@ class AdminProdiController extends Controller
 
     public function store(StoreProdiRequest $request)
     {
-        // Validasi sudah otomatis jalan di StoreProdiRequest
-        // Jika gagal, otomatis kembali ke form dengan error
-        
-        Prodi::create($request->validated()); // Pakai validated() biar aman
-
+        Prodi::create($request->validated());
         return redirect()->route('admin.prodis.index')->with('success', 'Prodi berhasil ditambahkan!');
     }
 
@@ -68,12 +59,15 @@ class AdminProdiController extends Controller
     public function update(UpdateProdiRequest $request, Prodi $prodi)
     {
         $prodi->update($request->validated());
-
         return redirect()->route('admin.prodis.index')->with('success', 'Prodi berhasil diperbarui!');
     }
 
     public function destroy(Prodi $prodi)
     {
+        if ($prodi->users()->count() > 0 || $prodi->labs()->count() > 0) {
+            return back()->with('error', 'Gagal: Prodi ini masih memiliki data User atau Laboratorium.');
+        }
+
         $prodi->delete();
         return redirect()->route('admin.prodis.index')->with('success', 'Prodi berhasil dihapus!');
     }

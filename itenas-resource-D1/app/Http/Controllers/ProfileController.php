@@ -27,28 +27,27 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-    $request->user()->fill($request->validated());
+        $user = $request->user();
+        $user->fill($request->validated());
 
-    // === LOGIKA UPLOAD FOTO ===
-    if ($request->hasFile('avatar')) {
-        // 1. Hapus foto lama jika ada (agar tidak menuh-menuhin server)
-        if ($request->user()->avatar && Storage::disk('public')->exists($request->user()->avatar)) {
-            Storage::disk('public')->delete($request->user()->avatar);
+        if ($request->hasFile('avatar')) {
+            // Hapus foto lama
+            if ($user->avatar) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+
+            // Simpan foto baru dengan nama unik
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->avatar = $path;
         }
 
-        // 2. Simpan foto baru
-        $path = $request->file('avatar')->store('avatars', 'public');
-        $request->user()->avatar = $path;
-    }
-    // ==========================
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
 
-    if ($request->user()->isDirty('email')) {
-        $request->user()->email_verified_at = null;
-    }
+        $user->save();
 
-    $request->user()->save();
-
-    return Redirect::route('profile.edit')->with('status', 'profile-updated');
+        return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
     /**

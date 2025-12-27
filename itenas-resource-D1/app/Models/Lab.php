@@ -4,30 +4,31 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Lab extends Model
 {
     use HasFactory;
 
-    // Kita ganti $guarded menjadi $fillable agar lebih spesifik kolom mana yang boleh diisi
     protected $fillable = [
         'name',
         'code',
-        'building_name',
+        'prodi_id',
+        'building_name', // Diperbaiki dari 'location'
+        'capacity',
         'description',
-        'latitude',   // <--- Kolom Baru untuk Peta
-        'longitude'   // <--- Kolom Baru untuk Peta
+        'latitude',
+        'longitude'
     ];
 
-    // Relasi ke Prodi (Opsional, jika ada tabel prodis)
-    public function prodi()
+    public function prodi(): BelongsTo
     {
-        return $this->belongsTo(Prodi::class);
+        return $this->belongsTo(Prodi::class, 'prodi_id');
     }
 
-    // Relasi ke Aset (Lab ini punya banyak aset)
-    public function assets()
+    public function assets(): HasMany
     {
-        return $this->hasMany(Asset::class);
+        return $this->hasMany(Asset::class, 'lab_id');
     }
 }

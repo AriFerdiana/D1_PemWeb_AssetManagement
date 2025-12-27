@@ -3,62 +3,79 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lab;
-use App\Models\Prodi; // Pastikan Model Prodi di-import
+use App\Models\Prodi;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth; // Tambahkan ini
+use Exception;
+use App\Imports\LabsImport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class AdminLabController extends Controller
 {
     /**
-     * Menampilkan daftar Lab dengan Search & Filter
+     * Menampilkan daftar Lab.
+     * Superadmin -> Semua Lab.
+     * Laboran -> Lab di prodinya saja.
      */
     public function index(Request $request)
     {
-        // 1. Mulai Query dengan Eager Loading (Relasi Prodi)
-        // Asumsi nama relasi di Model Lab adalah 'prodi'
+        $user = Auth::user();
         $query = Lab::with('prodi');
 
-        // 2. LOGIKA SEARCH (Nama Lab atau Lokasi/Gedung)
+        // 1. FILTER BERDASARKAN ROLE (Silo Data)
+        if ($user->hasRole('Laboran')) {
+            $query->where('prodi_id', $user->prodi_id);
+        }
+
+        // 2. LOGIKA SEARCH
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('location', 'like', "%{$search}%");
+                  ->orWhere('building_name', 'like', "%{$search}%");
             });
         }
 
-        // 3. LOGIKA FILTER (Berdasarkan Prodi)
-        if ($request->filled('prodi_id')) {
-            $query->where('prodi_id', $request->prodi_id);
-        }
-
-        // 4. Ambil data terbaru + pagination
+        // 3. AMBIL DATA & TAMPILKAN VIEW
         $labs = $query->latest()->paginate(10)->withQueryString();
-
-        // 5. Ambil data Prodi untuk isi Dropdown Filter
         $prodis = Prodi::orderBy('name', 'asc')->get();
 
         return view('admin.labs.index', compact('labs', 'prodis'));
     }
 
-    // --- FUNCTION LAIN (Create, Store, Edit, Update, Destroy) BIARKAN TETAP ---
-    
     public function create()
     {
-        // Kita butuh data prodi juga di form create
-        $prodis = Prodi::all();
+        $user = Auth::user();
+        
+        // Laboran hanya bisa membuat lab untuk prodinya sendiri
+        if ($user->hasRole('Laboran')) {
+            $prodis = Prodi::where('id', $user->prodi_id)->get();
+        } else {
+            $prodis = Prodi::all();
+        }
+
         return view('admin.labs.create', compact('prodis'));
     }
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+
         $request->validate([
-            'name' => 'required|string|max:255',
-            'prodi_id' => 'required|exists:prodis,id',
-            'location' => 'required|string',
-            'capacity' => 'required|integer',
-            'description' => 'nullable|string',
+            'name'          => 'required|string|max:255',
+            'prodi_id'      => 'required|exists:prodis,id',
+            'building_name' => 'required|string',
+            'capacity'      => 'required|integer',
+            'description'   => 'nullable|string',
+            'latitude'      => 'nullable|string', // Pastikan input ini ada di form
+            'longitude'     => 'nullable|string', // Pastikan input ini ada di form
         ]);
+
+        // PROTEKSI: Laboran tidak boleh mendaftarkan lab ke prodi lain
+        if ($user->hasRole('Laboran') && $request->prodi_id != $user->prodi_id) {
+            return back()->with('error', 'Anda hanya bisa menambah Lab untuk prodi Anda sendiri.');
+        }
 
         Lab::create($request->all());
 
@@ -67,24 +84,50 @@ class AdminLabController extends Controller
 
     public function show(Lab $lab)
     {
+        $user = Auth::user();
+        // Cek akses jika Laboran
+        if ($user->hasRole('Laboran') && $lab->prodi_id != $user->prodi_id) {
+            abort(403, 'Anda tidak memiliki akses ke data Lab ini.');
+        }
+
         return view('admin.labs.show', compact('lab'));
     }
 
     public function edit(Lab $lab)
     {
-        $prodis = Prodi::all();
+        $user = Auth::user();
+        // Cek akses jika Laboran
+        if ($user->hasRole('Laboran') && $lab->prodi_id != $user->prodi_id) {
+            abort(403, 'Anda tidak memiliki akses untuk mengedit Lab ini.');
+        }
+
+        if ($user->hasRole('Laboran')) {
+            $prodis = Prodi::where('id', $user->prodi_id)->get();
+        } else {
+            $prodis = Prodi::all();
+        }
+
         return view('admin.labs.edit', compact('lab', 'prodis'));
     }
 
     public function update(Request $request, Lab $lab)
     {
+        $user = Auth::user();
+
         $request->validate([
-            'name' => 'required|string|max:255',
-            'prodi_id' => 'required|exists:prodis,id',
-            'location' => 'required|string',
-            'capacity' => 'required|integer',
-            'description' => 'nullable|string',
+            'name'          => 'required|string|max:255',
+            'prodi_id'      => 'required|exists:prodis,id',
+            'building_name' => 'required|string',
+            'capacity'      => 'required|integer',
+            'description'   => 'nullable|string',
+            'latitude'      => 'nullable|string',
+            'longitude'     => 'nullable|string',
         ]);
+
+        // PROTEKSI UPDATE
+        if ($user->hasRole('Laboran') && ($lab->prodi_id != $user->prodi_id || $request->prodi_id != $user->prodi_id)) {
+            abort(403);
+        }
 
         $lab->update($request->all());
 
@@ -93,7 +136,27 @@ class AdminLabController extends Controller
 
     public function destroy(Lab $lab)
     {
+        $user = Auth::user();
+        // PROTEKSI HAPUS
+        if ($user->hasRole('Laboran') && $lab->prodi_id != $user->prodi_id) {
+            abort(403);
+        }
+
         $lab->delete();
         return redirect()->route('admin.labs.index')->with('success', 'Lab berhasil dihapus!');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:2048'
+        ]);
+
+        try {
+            Excel::import(new LabsImport, $request->file('file'));
+            return back()->with('success', 'Data Laboratorium berhasil diimpor!');
+        } catch (Exception $e) {
+            return back()->with('error', 'Terjadi kesalahan import: ' . $e->getMessage());
+        }
     }
 }

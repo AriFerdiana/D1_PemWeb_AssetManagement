@@ -4,30 +4,38 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Asset extends Model
 {
     use HasFactory;
 
-    // Mengizinkan semua kolom diisi (Mass Assignment)
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'name',
+        'code',
+        'category_id',
+        'lab_id', // Ini kunci utama untuk tahu aset ini milik prodi mana
+        'stock',
+        'image',
+        'status',
+        'description'
+    ];
 
-    // === RELASI YANG SEBELUMNYA SUDAH ADA ===
-    public function lab()
+    public function category(): BelongsTo
     {
-        return $this->belongsTo(Lab::class);
+        return $this->belongsTo(Category::class, 'category_id');
     }
 
-    // === INI YANG HILANG & BIKIN ERROR ===
-    // Menghubungkan Aset ke Kategori (category_id)
-    public function category()
+    public function lab(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Lab::class, 'lab_id');
     }
 
-    // === RELASI TAMBAHAN (Opsional untuk ke depannya) ===
-    public function reservationItems()
+    /**
+     * Shortcut untuk mendapatkan prodi aset melalui Lab
+     */
+    public function getProdiAttribute()
     {
-        return $this->hasMany(ReservationItem::class);
+        return $this->lab->prodi ?? null;
     }
 }

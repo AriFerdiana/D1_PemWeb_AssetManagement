@@ -1,123 +1,110 @@
-<aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="bg-navy-800 text-white w-64 flex flex-col flex-shrink-0 fixed md:relative inset-y-0 left-0 z-30 transition-transform duration-300 ease-in-out md:translate-x-0 shadow-xl border-r border-navy-700">
+<aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" 
+       class="w-64 bg-[#E65100] text-white flex flex-col h-screen fixed inset-y-0 left-0 z-30 transition-transform duration-300 ease-in-out md:translate-x-0 shadow-2xl">
     
-    {{-- Header Logo --}}
-    <div class="h-16 flex items-center px-6 bg-navy-900 border-b border-navy-700">
-        <div class="flex items-center space-x-3">
-            <div class="bg-teal-500 w-8 h-8 rounded-lg flex items-center justify-center shadow-lg shadow-teal-500/50">
-                <i class="fas fa-server text-white text-sm"></i>
+    {{-- LOGO (Fixed Top) --}}
+    <div class="h-20 flex items-center px-6 bg-[#BF360C] border-b border-orange-800 shrink-0">
+        <a href="{{ route('dashboard') }}" class="flex items-center gap-3 hover:opacity-90 transition">
+            <div class="bg-white p-1.5 rounded-lg shadow-sm">
+                <img src="https://uat-web.itenas.ac.id/assets/images/logo-7.png" class="h-8 w-auto" alt="Logo ITENAS">
             </div>
             <div>
-                <h1 class="text-lg font-bold tracking-wide text-white">ITENAS</h1>
-                <p class="text-[10px] text-teal-400 font-medium uppercase tracking-widest">Resource Center</p>
+                <h1 class="text-xl font-bold tracking-tight text-white leading-none">ITENAS</h1>
+                <p class="text-[10px] text-orange-200 font-medium uppercase tracking-widest mt-0.5">Resource Center</p>
             </div>
-        </div>
-        <button @click="sidebarOpen = false" class="md:hidden ml-auto text-gray-400 hover:text-white">
+        </a>
+        <button @click="sidebarOpen = false" class="md:hidden ml-auto text-orange-200 hover:text-white">
             <i class="fas fa-times"></i>
         </button>
     </div>
-    
-    {{-- Menu Scrollable --}}
-    <div class="flex-1 overflow-y-auto py-6 px-3 space-y-1">
+
+    {{-- MENU SCROLL --}}
+    <div class="flex-1 overflow-y-auto py-6 space-y-1 custom-scroll">
         
-        <p class="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Navigasi Utama</p>
-        
-        <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 {{ request()->routeIs('dashboard') ? 'bg-teal-600 text-white shadow-md' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
-            <i class="fas fa-chart-pie w-5 text-center {{ request()->routeIs('dashboard') ? 'text-white' : 'text-teal-500' }}"></i>
-            <span class="font-medium text-sm">Dashboard</span>
+        <a href="{{ route('dashboard') }}" 
+           class="flex items-center px-6 py-3 transition-colors {{ request()->routeIs('dashboard') ? 'bg-orange-800 border-l-4 border-white font-bold' : 'hover:bg-orange-700 text-orange-100 hover:text-white' }}">
+            <i class="fas fa-th-large w-6 text-center"></i>
+            <span class="text-sm ml-2">Dashboard</span>
         </a>
 
-        {{-- MENU MAHASISWA --}}
+        {{-- ================= MENU MAHASISWA ================= --}}
         @unlessrole('Superadmin|Laboran')
-            <div class="mt-6 mb-2">
-                <p class="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Layanan Peminjaman</p>
+            <div class="mt-6 mb-2 px-6">
+                <p class="text-[11px] font-bold text-orange-200 uppercase tracking-wider">LAYANAN MAHASISWA</p>
             </div>
-
-            <a href="{{ route('assets.index') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 {{ request()->routeIs('assets.*') ? 'bg-teal-600 text-white shadow-md' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
-                <i class="fas fa-box-open w-5 text-center {{ request()->routeIs('assets.*') ? 'text-white' : 'text-blue-400' }}"></i>
-                <span class="font-medium text-sm">Katalog Alat</span>
+            
+            {{-- 1. Pinjam Asset --}}
+            <a href="{{ route('assets.index') }}" class="flex items-center px-6 py-3 transition-colors {{ request()->routeIs('assets.*') ? 'bg-orange-800 border-l-4 border-white font-bold' : 'hover:bg-orange-700 text-orange-100 hover:text-white' }}">
+                <i class="fas fa-search w-6 text-center"></i>
+                <span class="text-sm ml-2">Pinjam Asset</span>
             </a>
 
-            <a href="{{ route('rooms.index') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 {{ request()->routeIs('rooms.*') ? 'bg-teal-600 text-white shadow-md' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
-                <i class="fas fa-door-open w-5 text-center {{ request()->routeIs('rooms.*') ? 'text-white' : 'text-purple-400' }}"></i>
-                <span class="font-medium text-sm">Pinjam Ruangan</span>
+            {{-- 2. Riwayat Asset --}}
+            <a href="{{ route('reservations.assets') }}" class="flex items-center px-6 py-3 transition-colors {{ request()->routeIs('reservations.assets') ? 'bg-orange-800 border-l-4 border-white font-bold' : 'hover:bg-orange-700 text-orange-100 hover:text-white' }}">
+                <i class="fas fa-history w-6 text-center"></i>
+                <span class="text-sm ml-2">Riwayat Asset</span>
             </a>
 
-            <div class="mt-6 mb-2">
-                <p class="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Aktivitas Saya</p>
-            </div>
-
-            <a href="{{ route('reservations.assets') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 {{ request()->routeIs('reservations.*') ? 'bg-teal-600 text-white shadow-md' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
-                <i class="fas fa-history w-5 text-center {{ request()->routeIs('reservations.*') ? 'text-white' : 'text-orange-400' }}"></i>
-                <span class="font-medium text-sm">Riwayat & Tiket</span>
+            {{-- 3. Pinjam Ruangan --}}
+            <a href="{{ route('rooms.index') }}" class="flex items-center px-6 py-3 transition-colors {{ request()->routeIs('rooms.*') ? 'bg-orange-800 border-l-4 border-white font-bold' : 'hover:bg-orange-700 text-orange-100 hover:text-white' }}">
+                <i class="fas fa-door-open w-6 text-center"></i>
+                <span class="text-sm ml-2">Pinjam Ruangan</span>
+            </a>
+            
+            {{-- 4. Riwayat Ruangan --}}
+            <a href="{{ route('reservations.rooms') }}" class="flex items-center px-6 py-3 transition-colors {{ request()->routeIs('reservations.rooms') ? 'bg-orange-800 border-l-4 border-white font-bold' : 'hover:bg-orange-700 text-orange-100 hover:text-white' }}">
+                <i class="fas fa-clock w-6 text-center"></i>
+                <span class="text-sm ml-2">Riwayat Ruangan</span>
             </a>
         @endunlessrole
 
-
-        {{-- MENU ADMIN --}}
+        {{-- ================= MENU ADMIN & LABORAN ================= --}}
         @role('Superadmin|Laboran')
-            <div class="mt-6 mb-2">
-                <p class="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Sirkulasi & Admin</p>
+            <div class="mt-6 mb-2 px-6">
+                <p class="text-[11px] font-bold text-orange-200 uppercase tracking-wider">SIRKULASI</p>
             </div>
-
-            <a href="{{ route('admin.reservations.index') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 {{ request()->routeIs('admin.reservations.index') ? 'bg-teal-600 text-white shadow-md' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
-                <i class="fas fa-exchange-alt w-5 text-center"></i>
-                <span class="font-medium text-sm">Data Transaksi</span>
+            <a href="{{ route('admin.reservations.index') }}" class="flex items-center px-6 py-3 transition-colors {{ request()->routeIs('admin.reservations.*') ? 'bg-orange-800 border-l-4 border-white font-bold' : 'hover:bg-orange-700 text-orange-100 hover:text-white' }}">
+                <i class="fas fa-exchange-alt w-6 text-center"></i><span class="text-sm ml-2">Data Transaksi</span>
+            </a>
+            <a href="{{ route('admin.scan.index') }}" class="flex items-center px-6 py-3 transition-colors {{ request()->routeIs('admin.scan.*') ? 'bg-orange-800 border-l-4 border-white font-bold' : 'hover:bg-orange-700 text-orange-100 hover:text-white' }}">
+                <i class="fas fa-qrcode w-6 text-center"></i><span class="text-sm ml-2">Scan QR</span>
             </a>
 
-            <a href="{{ route('admin.scan.index') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 {{ request()->routeIs('admin.scan.*') ? 'bg-teal-600 text-white shadow-md' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
-                <i class="fas fa-qrcode w-5 text-center"></i>
-                <span class="font-medium text-sm">Scan QR Code</span>
-            </a>
-
-            <div class="mt-6 mb-2">
-                <p class="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Master Data</p>
+            <div class="mt-4 mb-2 px-6">
+                <p class="text-[11px] font-bold text-orange-200 uppercase tracking-wider">MASTER DATA</p>
             </div>
-
-            <a href="{{ route('admin.assets.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 {{ request()->routeIs('admin.assets.*') ? 'bg-navy-700 text-white' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
-                <i class="fas fa-box w-5 text-center"></i> <span class="text-sm">Data Aset</span>
+            <a href="{{ route('admin.assets.index') }}" class="flex items-center px-6 py-2 text-sm text-orange-100 hover:text-white hover:bg-orange-700 rounded transition {{ request()->routeIs('admin.assets.*') ? 'text-white font-bold bg-orange-700' : '' }}">
+                <i class="fas fa-box w-6 text-center"></i> <span class="ml-2">Kelola Aset</span>
             </a>
-            
-            <a href="{{ route('admin.labs.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 {{ request()->routeIs('admin.labs.*') ? 'bg-navy-700 text-white' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
-                <i class="fas fa-building w-5 text-center"></i> <span class="text-sm">Data Lab</span>
+            <a href="{{ route('admin.labs.index') }}" class="flex items-center px-6 py-2 text-sm text-orange-100 hover:text-white hover:bg-orange-700 rounded transition {{ request()->routeIs('admin.labs.*') ? 'text-white font-bold bg-orange-700' : '' }}">
+                <i class="fas fa-flask w-6 text-center"></i> <span class="ml-2">Kelola Lab</span>
             </a>
-
-            <a href="{{ route('admin.prodis.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 {{ request()->routeIs('admin.prodis.*') ? 'bg-navy-700 text-white' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
-                <i class="fas fa-university w-5 text-center"></i> <span class="text-sm">Data Prodi</span>
+             <a href="{{ route('admin.users.index') }}" class="flex items-center px-6 py-2 text-sm text-orange-100 hover:text-white hover:bg-orange-700 rounded transition {{ request()->routeIs('admin.users.*') ? 'text-white font-bold bg-orange-700' : '' }}">
+                <i class="fas fa-users w-6 text-center"></i> <span class="ml-2">Kelola User</span>
             </a>
 
-            <a href="{{ route('admin.categories.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 {{ request()->routeIs('admin.categories.*') ? 'bg-navy-700 text-white' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
-                <i class="fas fa-tags w-5 text-center"></i> <span class="text-sm">Kategori Aset</span>
-            </a>
+            {{-- MENU KHUSUS SUPERADMIN (Silo Data Protection) --}}
+            @role('Superadmin')
+                <a href="{{ route('admin.prodis.index') }}" class="flex items-center px-6 py-2 text-sm text-orange-100 hover:text-white hover:bg-orange-700 rounded transition {{ request()->routeIs('admin.prodis.*') ? 'text-white font-bold bg-orange-700' : '' }}">
+                    <i class="fas fa-university w-6 text-center"></i> <span class="ml-2">Kelola Prodi</span>
+                </a>
+                <a href="{{ route('admin.categories.index') }}" class="flex items-center px-6 py-2 text-sm text-orange-100 hover:text-white hover:bg-orange-700 rounded transition {{ request()->routeIs('admin.categories.*') ? 'text-white font-bold bg-orange-700' : '' }}">
+                    <i class="fas fa-tags w-6 text-center"></i> <span class="ml-2">Kategori</span>
+                </a>
+            @endrole
 
-            {{-- MENU MAINTENANCE (Ditambahkan Disini) --}}
-            <a href="{{ route('admin.maintenances.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 {{ request()->routeIs('admin.maintenances.*') ? 'bg-navy-700 text-white' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
-                <i class="fas fa-tools w-5 text-center"></i> <span class="text-sm">Log Perawatan</span>
-            </a>
-
-            <a href="{{ route('admin.users.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 {{ request()->routeIs('admin.users.*') ? 'bg-navy-700 text-white' : 'text-gray-400 hover:bg-navy-700 hover:text-white' }}">
-                <i class="fas fa-users-cog w-5 text-center"></i> <span class="text-sm">Data Pengguna</span>
+            <a href="{{ route('admin.maintenances.index') }}" class="flex items-center px-6 py-2 text-sm text-orange-100 hover:text-white hover:bg-orange-700 rounded transition {{ request()->routeIs('admin.maintenances.*') ? 'text-white font-bold bg-orange-700' : '' }}">
+                <i class="fas fa-tools w-6 text-center"></i> <span class="ml-2">Maintenance</span>
             </a>
         @endrole
     </div>
-    
-    {{-- Footer User Profile --}}
-    <div class="p-4 bg-navy-900 border-t border-navy-700">
-        <div class="flex items-center gap-3">
-            @if(Auth::user()->avatar)
-                <img src="{{ asset('storage/' . Auth::user()->avatar) }}" class="w-10 h-10 rounded-full object-cover border border-teal-500 shadow-sm">
-            @else
-                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-teal-400 to-blue-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                    {{ substr(Auth::user()->name, 0, 2) }}
-                </div>
-            @endif
-            <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-white truncate">{{ Auth::user()->name }}</p>
-                <p class="text-[10px] text-teal-400 truncate uppercase tracking-wider">{{ Auth::user()->getRoleNames()->first() ?? 'Mahasiswa' }}</p>
-            </div>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="text-gray-500 hover:text-red-400 transition" title="Keluar"><i class="fas fa-power-off"></i></button>
-            </form>
-        </div>
+
+    {{-- LOGOUT (Fixed Bottom) --}}
+    <div class="p-4 bg-[#BF360C] border-t border-orange-800 shrink-0">
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit" class="w-full flex items-center justify-center gap-2 bg-[#D32F2F] hover:bg-red-700 text-white py-2.5 rounded shadow transition font-bold text-sm group">
+                <i class="fas fa-sign-out-alt group-hover:animate-pulse"></i> LOG OUT
+            </button>
+        </form>
     </div>
 </aside>

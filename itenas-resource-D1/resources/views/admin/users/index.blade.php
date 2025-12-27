@@ -2,90 +2,95 @@
     @section('header', 'Kelola Pengguna')
 
     <div class="space-y-6">
-        
-        <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            
-            <form action="{{ route('admin.users.index') }}" method="GET" class="w-full md:w-auto">
-                <div class="relative">
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama / email..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 w-full md:w-64 text-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-                    <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
-                </div>
+        {{-- Search & Filter --}}
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <form method="GET" action="{{ route('admin.users.index') }}" class="flex flex-col md:flex-row gap-3">
+                <input type="text" name="search" value="{{ request('search') }}" 
+                       placeholder="Cari Nama / NIM / Email..." 
+                       class="flex-1 border-gray-300 rounded-lg text-sm focus:ring-navy-500">
+                
+                <button type="submit" class="bg-navy-700 text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-navy-800 transition">
+                    <i class="fas fa-search mr-1"></i> Cari
+                </button>
+                
+                {{-- Tombol Tambah hanya untuk yang berwenang --}}
+                <a href="{{ route('admin.users.create') }}" class="bg-orange-500 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-orange-600 transition flex items-center shadow-sm">
+                    <i class="fas fa-user-plus mr-2"></i> Tambah User
+                </a>
             </form>
-
-            <a href="{{ route('admin.users.create') }}" class="px-4 py-2 bg-navy-700 hover:bg-navy-800 text-white rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-lg">
-                <i class="fas fa-user-plus"></i> Tambah User Baru
-            </a>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-700">
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left">
-                    <thead class="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase font-bold text-xs tracking-wider border-b border-gray-200 dark:border-gray-600">
-                        <tr>
-                            <th class="px-6 py-4">Nama User</th>
-                            <th class="px-6 py-4">Email & Prodi</th>
-                            <th class="px-6 py-4">Role</th>
-                            <th class="px-6 py-4 text-center">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                        @foreach($users as $user)
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                            
+        {{-- Tabel Data Pengguna --}}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-50 text-gray-600 font-bold uppercase text-xs">
+                    <tr>
+                        <th class="px-6 py-4">Nama & Email</th>
+                        <th class="px-6 py-4">Identitas (NIM)</th>
+                        <th class="px-6 py-4">Prodi</th>
+                        <th class="px-6 py-4">Role</th>
+                        <th class="px-6 py-4 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse($users as $u)
+                        <tr class="hover:bg-gray-50 transition">
                             <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm">
-                                        {{ substr($user->name, 0, 2) }}
+                                <div class="flex items-center">
+                                    <div class="h-8 w-8 rounded-full bg-navy-100 text-navy-700 flex items-center justify-center font-bold mr-3 uppercase">
+                                        {{ substr($u->name, 0, 1) }}
                                     </div>
-                                    <div class="font-bold text-navy-800 dark:text-white">{{ $user->name }}</div>
+                                    <div>
+                                        <div class="font-bold text-gray-900">{{ $u->name }}</div>
+                                        <div class="text-[10px] text-gray-400">{{ $u->email }}</div>
+                                    </div>
                                 </div>
                             </td>
-
-                            <td class="px-6 py-4">
-                                <div class="text-gray-700 dark:text-gray-300">{{ $user->email }}</div>
-                                <div class="text-xs text-gray-500 flex items-center gap-1">
-                                    <i class="fas fa-graduation-cap text-gray-400"></i>
-                                    {{ $user->prodi->name ?? 'Non-Prodi' }}
-                                </div>
+                            <td class="px-6 py-4 font-mono text-gray-600">{{ $u->nim ?? '-' }}</td>
+                            <td class="px-6 py-4 uppercase font-bold text-xs text-teal-600">
+                                {{ $u->prodi->code ?? ($u->prodi ?? 'Umum') }}
                             </td>
-
                             <td class="px-6 py-4">
-                                @php
-                                    $role = $user->getRoleNames()->first();
-                                    $color = match($role) {
-                                        'Superadmin' => 'purple',
-                                        'Laboran' => 'blue',
-                                        'Dosen' => 'orange',
-                                        default => 'gray'
-                                    };
-                                @endphp
-                                <span class="px-2 py-1 bg-{{ $color }}-100 text-{{ $color }}-700 rounded-full text-xs font-bold border border-{{ $color }}-200">
-                                    {{ ucfirst($role) }}
-                                </span>
+                                @foreach($u->roles as $role)
+                                    <span class="px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 text-[10px] font-black uppercase">
+                                        {{ $role->name }}
+                                    </span>
+                                @endforeach
                             </td>
-
-                            <td class="px-6 py-4 text-center">
+                            <td class="px-6 py-4">
                                 <div class="flex justify-center gap-2">
-                                    <a href="{{ route('admin.users.edit', $user->id) }}" class="p-2 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100 transition border border-yellow-200" title="Edit Data">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
+                                    {{-- PROTEKSI KEAMANAN: Laboran hanya bisa edit user di prodinya & bukan Superadmin --}}
+                                    @php
+                                        $canManage = Auth::user()->hasRole('Superadmin') || 
+                                                    (Auth::user()->hasRole('Laboran') && 
+                                                     $u->prodi_id == Auth::user()->prodi_id && 
+                                                     !$u->hasRole('Superadmin'));
+                                    @endphp
 
-                                    <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Yakin hapus user ini?');">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition border border-red-200" title="Hapus User">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
+                                    @if($canManage)
+                                        <a href="{{ route('admin.users.edit', $u->id) }}" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 shadow-sm" title="Edit">
+                                            <i class="fas fa-edit text-xs"></i>
+                                        </a>
+                                        
+                                        <form action="{{ route('admin.users.destroy', $u->id) }}" method="POST" onsubmit="return confirm('Hapus pengguna ini?')">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 shadow-sm" title="Hapus">
+                                                <i class="fas fa-trash text-xs"></i>
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="text-[10px] text-gray-400 italic">Terproteksi</span>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 dark:text-white">
-                {{ $users->withQueryString()->links() }}
+                    @empty
+                        <tr><td colspan="5" class="text-center py-10 text-gray-400 italic font-medium">Data pengguna tidak ditemukan.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+            <div class="p-4 border-t bg-gray-50">
+                {{ $users->links() }}
             </div>
         </div>
     </div>
