@@ -1,10 +1,9 @@
 <x-app-layout>
     @section('header', 'Kelola Aset (Administrator)')
 
-    {{-- Container utama dengan Alpine.js untuk kontrol Modal dan Nama File --}}
     <div x-data="{ showImportModal: false, fileName: '' }" class="space-y-6">
 
-        {{-- === ALERT NOTIFIKASI === --}}
+        {{-- ALERT --}}
         @if(session('success'))
             <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-xl relative shadow-sm" role="alert">
                 <span class="block sm:inline font-bold"><i class="fas fa-check-circle mr-2"></i> {{ session('success') }}</span>
@@ -17,9 +16,8 @@
             </div>
         @endif
 
-        {{-- === DASHBOARD STATS & ACTIONS === --}}
+        {{-- STATS --}}
         <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            
             <div class="flex items-center gap-4 text-sm text-gray-600">
                 <span class="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full font-medium">
                     <i class="fas fa-cube text-navy-600"></i> Total: <strong>{{ $assets->total() }}</strong>
@@ -31,22 +29,31 @@
 
             <div class="flex flex-wrap gap-2">
                 <div class="flex gap-2 mr-2 border-r pr-4 border-gray-200">
-                    {{-- TOMBOL IMPORT (BIRU) --}}
                     <button @click="showImportModal = true; fileName = ''" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-md transform hover:-translate-y-0.5">
                         <i class="fas fa-file-import"></i> Import
                     </button>
                 </div>
-
                 <a href="{{ route('admin.assets.create') }}" class="px-5 py-2.5 bg-navy-700 hover:bg-navy-800 text-white rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-lg transform hover:-translate-y-0.5">
                     <i class="fas fa-plus"></i> Tambah Aset Baru
                 </a>
             </div>
         </div>
 
-        {{-- === SEARCH & FILTER BAR === --}}
+        {{-- SEARCH & FILTER BAR --}}
         <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <form method="GET" action="{{ route('admin.assets.index') }}" class="flex flex-col md:flex-row gap-4">
+            <form method="GET" action="{{ route('admin.assets.index') }}" class="flex flex-col md:flex-row gap-4 items-center">
                 
+                {{-- [PERBAIKAN 1: Menambahkan Dropdown Jumlah Baris] --}}
+                <div class="w-full md:w-auto">
+                    <select name="per_page" onchange="this.form.submit()" class="w-full md:w-24 rounded-lg border-gray-300 text-sm focus:ring-navy-500 focus:border-navy-500 cursor-pointer text-center font-bold bg-gray-50" title="Jumlah Baris">
+                        <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10 Baris</option>
+                        <option value="20" {{ request('per_page') == 20 ? 'selected' : '' }}>20 Baris</option>
+                        <option value="30" {{ request('per_page') == 30 ? 'selected' : '' }}>30 Baris</option>
+                        <option value="40" {{ request('per_page') == 40 ? 'selected' : '' }}>40 Baris</option>
+                        <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 Baris</option>
+                    </select>
+                </div>
+
                 <div class="w-full md:w-1/4">
                     <select name="category_id" onchange="this.form.submit()" class="w-full rounded-lg border-gray-300 text-sm focus:ring-navy-500 focus:border-navy-500 cursor-pointer">
                         <option value="">Semua Kategori</option>
@@ -70,7 +77,7 @@
                     <button type="submit" class="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition font-bold shadow-sm">
                         Cari
                     </button>
-                    @if(request('search') || request('category_id'))
+                    @if(request('search') || request('category_id') || request('per_page'))
                         <a href="{{ route('admin.assets.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition flex items-center shadow-sm">
                             <i class="fas fa-undo"></i>
                         </a>
@@ -79,7 +86,7 @@
             </form>
         </div>
 
-        {{-- === TABEL ASET === --}}
+        {{-- TABEL ASET --}}
         <div class="bg-white rounded-xl shadow-card overflow-hidden border border-gray-100">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left">
@@ -98,8 +105,13 @@
                         <tr class="hover:bg-gray-50 transition group">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
+                                    {{-- [PERBAIKAN 2: Logika Gambar] --}}
                                     <div class="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200 group-hover:scale-105 transition-transform">
-                                        @if($asset->image)
+                                        @if(filter_var($asset->image, FILTER_VALIDATE_URL))
+                                            {{-- Jika Link URL Internet --}}
+                                            <img src="{{ $asset->image }}" class="w-full h-full object-cover">
+                                        @elseif($asset->image)
+                                            {{-- Jika File Upload Lokal --}}
                                             <img src="{{ asset('storage/' . $asset->image) }}" class="w-full h-full object-cover">
                                         @else
                                             <div class="w-full h-full flex items-center justify-center text-gray-300">
@@ -128,8 +140,9 @@
                                     </button>
                                 </div>
                             </td>
+                            {{-- [PERBAIKAN 3: Ubah stock jadi quantity] --}}
                             <td class="px-6 py-4 text-center">
-                                <span class="px-3 py-1 bg-navy-50 text-navy-700 rounded-lg font-bold">{{ $asset->stock }}</span>
+                                <span class="px-3 py-1 bg-navy-50 text-navy-700 rounded-lg font-bold">{{ $asset->quantity }}</span>
                             </td>
                             <td class="px-6 py-4 text-center">
                                 @if($asset->status == 'available')
@@ -163,7 +176,7 @@
             </div>
         </div>
 
-        {{-- === MODAL IMPORT EXCEL === --}}
+        {{-- MODAL IMPORT --}}
         <div x-show="showImportModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" @click.away="showImportModal = false">
                 <div class="flex justify-between items-center mb-4">
@@ -171,8 +184,7 @@
                     <button @click="showImportModal = false" class="text-gray-400 hover:text-gray-600 transition-colors"><i class="fas fa-times"></i></button>
                 </div>
 
-                {{-- Ganti rute ini --}}
-<form action="{{ route('admin.assets.import') }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('admin.assets.import') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="mb-6">
                         <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
@@ -203,7 +215,7 @@
         </div>
     </div>
 
-    {{-- MODAL QR CODE --}}
+    {{-- MODAL QR --}}
     <div id="qrModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4">
             <div class="fixed inset-0 bg-black bg-opacity-70 transition-opacity" onclick="document.getElementById('qrModal').classList.add('hidden')"></div>

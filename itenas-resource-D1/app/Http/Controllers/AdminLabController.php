@@ -19,30 +19,36 @@ class AdminLabController extends Controller
      * Laboran -> Lab di prodinya saja.
      */
     public function index(Request $request)
-    {
-        $user = Auth::user();
-        $query = Lab::with('prodi');
+{
+    $user = Auth::user();
+    $query = Lab::with('prodi');
 
-        // 1. FILTER BERDASARKAN ROLE (Silo Data)
-        if ($user->hasRole('Laboran')) {
-            $query->where('prodi_id', $user->prodi_id);
-        }
-
-        // 2. LOGIKA SEARCH
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('building_name', 'like', "%{$search}%");
-            });
-        }
-
-        // 3. AMBIL DATA & TAMPILKAN VIEW
-        $labs = $query->latest()->paginate(10)->withQueryString();
-        $prodis = Prodi::orderBy('name', 'asc')->get();
-
-        return view('admin.labs.index', compact('labs', 'prodis'));
+    // 1. FILTER BERDASARKAN ROLE (Silo Data)
+    if ($user->hasRole('Laboran')) {
+        $query->where('prodi_id', $user->prodi_id);
     }
+
+    // 2. LOGIKA SEARCH
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('building_name', 'like', "%{$search}%");
+        });
+    }
+
+    // 3. FITUR SHOW ENTRIES (10, 20, 50)
+    // Ambil input 'per_page', defaultnya 10
+    $perPage = $request->input('per_page', 10);
+
+    // 4. AMBIL DATA & TAMPILKAN VIEW
+    // Gunakan variabel $perPage di dalam paginate()
+    $labs = $query->latest()->paginate($perPage)->withQueryString();
+    
+    $prodis = Prodi::orderBy('name', 'asc')->get();
+
+    return view('admin.labs.index', compact('labs', 'prodis'));
+}
 
     public function create()
     {

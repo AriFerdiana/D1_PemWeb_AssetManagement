@@ -37,6 +37,10 @@
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
+
+    {{-- [PERBAIKAN 1] Tambahkan Stack Styles disini agar CSS Peta Leaflet terbaca --}}
+    @stack('styles')
+
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 antialiased min-h-screen flex" 
       x-data="{ 
@@ -58,7 +62,6 @@
     @include('layouts.sidebar')
 
     {{-- 2. KONTEN UTAMA --}}
-    {{-- PERBAIKAN: 'md:ml-64' wajib ada agar konten tidak ketutupan sidebar --}}
     <div class="flex-1 flex flex-col min-w-0 md:ml-64 transition-all duration-300 min-h-screen">
         
         {{-- HEADER NAVIGATION --}}
@@ -166,12 +169,9 @@
          class="fixed inset-0 bg-black/50 z-20 md:hidden"
          x-transition.opacity>
     </div>
+    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        /**
-         * 1. NOTIFIKASI OTOMATIS (TOAST)
-         * Muncul otomatis jika ada Session Success/Error dari Controller
-         */
         const Toast = Swal.mixin({
             toast: true,
             position: 'top-end',
@@ -192,10 +192,6 @@
             Toast.fire({ icon: 'error', title: "{{ session('error') }}" });
         @endif
 
-        /**
-         * 2. KONFIRMASI HAPUS GLOBAL
-         * Mencari semua tombol dengan class 'delete-confirm'
-         */
         document.addEventListener('click', function(e) {
             const deleteButton = e.target.closest('.delete-confirm');
             if (deleteButton) {
@@ -207,7 +203,7 @@
                     text: "Data yang dihapus tidak dapat dikembalikan!",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonColor: '#E65100', // Oranye ITENAS
+                    confirmButtonColor: '#E65100', 
                     cancelButtonColor: '#6B7280',
                     confirmButtonText: 'Ya, Hapus!',
                     cancelButtonText: 'Batal',
@@ -220,10 +216,6 @@
             }
         });
 
-        /**
-         * 3. FUNGSI KHUSUS PENOLAKAN RESERVASI (MODAL DENGAN INPUT)
-         * Digunakan di AdminReservationController
-         */
         function rejectReservation(id) {
             Swal.fire({
                 title: 'Tolak Peminjaman?',
@@ -243,7 +235,6 @@
                 }
             }).then((result) => {
                 if (result.isConfirmed && result.value) {
-                    // Buat form dinamis untuk kirim data ke controller
                     let form = document.createElement('form');
                     form.action = `/admin/reservations/${id}/status`;
                     form.method = 'POST';
@@ -259,5 +250,9 @@
             })
         }
     </script>
+
+    {{-- [PERBAIKAN 2] Tambahkan Stack Scripts disini agar JS Peta Leaflet terbaca --}}
+    @stack('scripts')
+
 </body>
 </html>

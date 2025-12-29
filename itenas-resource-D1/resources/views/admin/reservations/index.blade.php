@@ -1,6 +1,6 @@
 <x-app-layout>
     {{-- JUDUL HALAMAN UNTUK ADMIN --}}
-    @section('header', 'Manajemen Transaksi Sirkulasi')
+    @section('header', 'Manajemen Transaksi')
 
     <div class="space-y-6">
         

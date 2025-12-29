@@ -75,9 +75,12 @@
             <a href="{{ route('admin.assets.index') }}" class="flex items-center px-6 py-2 text-sm text-orange-100 hover:text-white hover:bg-orange-700 rounded transition {{ request()->routeIs('admin.assets.*') ? 'text-white font-bold bg-orange-700' : '' }}">
                 <i class="fas fa-box w-6 text-center"></i> <span class="ml-2">Kelola Aset</span>
             </a>
+            
+            {{-- PERUBAHAN DI SINI: Icon jadi Pintu, Teks jadi Ruangan --}}
             <a href="{{ route('admin.labs.index') }}" class="flex items-center px-6 py-2 text-sm text-orange-100 hover:text-white hover:bg-orange-700 rounded transition {{ request()->routeIs('admin.labs.*') ? 'text-white font-bold bg-orange-700' : '' }}">
-                <i class="fas fa-flask w-6 text-center"></i> <span class="ml-2">Kelola Lab</span>
+                <i class="fas fa-door-open w-6 text-center"></i> <span class="ml-2">Kelola Ruangan</span>
             </a>
+
              <a href="{{ route('admin.users.index') }}" class="flex items-center px-6 py-2 text-sm text-orange-100 hover:text-white hover:bg-orange-700 rounded transition {{ request()->routeIs('admin.users.*') ? 'text-white font-bold bg-orange-700' : '' }}">
                 <i class="fas fa-users w-6 text-center"></i> <span class="ml-2">Kelola User</span>
             </a>
@@ -88,12 +91,12 @@
                     <i class="fas fa-university w-6 text-center"></i> <span class="ml-2">Kelola Prodi</span>
                 </a>
                 <a href="{{ route('admin.categories.index') }}" class="flex items-center px-6 py-2 text-sm text-orange-100 hover:text-white hover:bg-orange-700 rounded transition {{ request()->routeIs('admin.categories.*') ? 'text-white font-bold bg-orange-700' : '' }}">
-                    <i class="fas fa-tags w-6 text-center"></i> <span class="ml-2">Kategori</span>
+                    <i class="fas fa-tags w-6 text-center"></i> <span class="ml-2">Kelola Kategori</span>
                 </a>
             @endrole
 
             <a href="{{ route('admin.maintenances.index') }}" class="flex items-center px-6 py-2 text-sm text-orange-100 hover:text-white hover:bg-orange-700 rounded transition {{ request()->routeIs('admin.maintenances.*') ? 'text-white font-bold bg-orange-700' : '' }}">
-                <i class="fas fa-tools w-6 text-center"></i> <span class="ml-2">Maintenance</span>
+                <i class="fas fa-tools w-6 text-center"></i> <span class="ml-2">Kelola Maintenance</span>
             </a>
         @endrole
     </div>

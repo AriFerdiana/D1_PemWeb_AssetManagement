@@ -7,7 +7,7 @@
         {{-- CASE: STATUS PENDING (Tombol Terima & Tolak) --}}
         @if($res->status == 'pending')
             <div class="flex gap-1.5">
-                {{-- Tombol Terima (Tanpa pop-up browser, langsung submit dengan notifikasi Toast nantinya) --}}
+
                 <form action="{{ route('admin.reservations.update', $res->id) }}" method="POST">
                     @csrf @method('PATCH')
                     <input type="hidden" name="status" value="approved">

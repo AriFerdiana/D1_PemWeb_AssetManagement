@@ -1,5 +1,5 @@
 <x-app-layout>
-    @section('header', 'Kelola Laboratorium')
+    @section('header', 'Kelola Ruangan')
 
     <div x-data="{ showImportModal: false, fileName: '' }">
         
@@ -17,8 +17,20 @@
 
         <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6">
             <div class="w-full md:w-3/4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <form action="{{ route('admin.labs.index') }}" method="GET" class="flex flex-col md:flex-row gap-3">
-                    <div class="relative flex-1">
+                <form action="{{ route('admin.labs.index') }}" method="GET" class="flex flex-col md:flex-row gap-3 items-center">
+                    
+                    {{-- [BARU] DROPDOWN JUMLAH BARIS --}}
+                    <div class="w-full md:w-auto">
+                        <select name="per_page" onchange="this.form.submit()" class="w-full md:w-24 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-navy-500 focus:border-navy-500 bg-white cursor-pointer font-bold text-center" title="Jumlah Baris">
+                            <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10 Baris</option>
+                            <option value="20" {{ request('per_page') == 20 ? 'selected' : '' }}>20 Baris</option>
+                            <option value="30" {{ request('per_page') == 30 ? 'selected' : '' }}>30 Baris</option>
+                            <option value="40" {{ request('per_page') == 40 ? 'selected' : '' }}>40 Baris</option>
+                            <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 Baris</option>
+                        </select>
+                    </div>
+
+                    <div class="relative flex-1 w-full">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3">
                             <i class="fas fa-search text-gray-400"></i>
                         </span>
@@ -35,8 +47,12 @@
                     </select>
 
                     <button type="submit" class="px-5 py-2 bg-navy-700 text-white rounded-lg text-sm font-bold hover:bg-navy-800 transition">Cari</button>
-                    @if(request()->hasAny(['search', 'prodi_id']))
-                        <a href="{{ route('admin.labs.index') }}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-bold border border-gray-200 flex items-center justify-center"><i class="fas fa-undo"></i></a>
+                    
+                    {{-- Tombol Reset --}}
+                    @if(request()->hasAny(['search', 'prodi_id', 'per_page']))
+                        <a href="{{ route('admin.labs.index') }}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-bold border border-gray-200 flex items-center justify-center" title="Reset Filter">
+                            <i class="fas fa-undo"></i>
+                        </a>
                     @endif
                 </form>
             </div>

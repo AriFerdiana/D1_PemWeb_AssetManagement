@@ -14,33 +14,33 @@ return new class extends Migration
         Schema::create('assets', function (Blueprint $table) {
             $table->id();
             
-            // 1. Relasi ke Lab (Wajib)
+            // 1. Relasi (Wajib ada Lab & Kategori)
             $table->foreignId('lab_id')->constrained('labs')->onDelete('cascade');
-            
-            // 2. Relasi ke Category (INI YANG TADI ERROR "Unknown Column")
-            // Kita buat nullable() jaga-jaga kalau ada aset tanpa kategori, tapi sebaiknya diisi.
             $table->foreignId('category_id')->nullable()->constrained('categories')->onDelete('set null');
 
-            // 3. Data Identitas Aset
+            // 2. Data Identitas
             $table->string('name');
+            $table->string('code')->unique(); // Kode Aset (misal: IF-001)
             
-            // Ganti 'serial_number' jadi 'code' agar sesuai dengan Seeder (IF-7590-1)
-            $table->string('code')->unique(); 
+            // 3. Data Fisik (PERBAIKAN DI SINI)
+            // Ubah 'stock' jadi 'quantity' agar sesuai Seeder
+            $table->integer('quantity')->default(1); 
             
-            // 4. Data Fisik
-            $table->integer('stock')->default(1);
-            
-            // Ganti 'condition' jadi 'status' agar sesuai logika Controller (available, maintenance)
+            // Status Peminjaman (Available, Borrowed, Maintenance)
             $table->string('status')->default('available'); 
             
-            // Ganti 'image_path' jadi 'image' agar sesuai Controller storage
-            $table->string('image')->nullable();
+            // Kondisi Fisik (Good, Damaged, Lost) - INI DITAMBAHKAN
+            $table->string('condition')->default('good');   
             
-            // 5. Data Tambahan
-            $table->string('prodi')->nullable(); // Penting untuk filter per jurusan
+            // Gambar (PERBAIKAN TIPE DATA)
+            // Ubah jadi TEXT agar muat link panjang dari internet
+            $table->text('image')->nullable();
+            
+            // 4. Data Tambahan
             $table->text('description')->nullable();
-            $table->decimal('rental_price', 10, 2)->default(0); // Opsional untuk denda/sewa
-
+            // Kolom 'prodi' saya hapus karena redundan (sudah bisa diambil via lab_id -> prodi)
+            // Kolom 'rental_price' opsional, boleh dibiarkan jika butuh
+            
             $table->timestamps();
         });
     }

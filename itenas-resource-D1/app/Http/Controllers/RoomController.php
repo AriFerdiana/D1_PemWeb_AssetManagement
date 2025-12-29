@@ -10,10 +10,41 @@ use Carbon\Carbon;
 
 class RoomController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $rooms = Lab::with('prodi')->latest()->paginate(9);
-        return view('rooms.index', compact('rooms'));
+        // Query Dasar
+        $query = Lab::with('prodi');
+
+        // 1. Fitur Pencarian (Nama Ruangan)
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        // 2. Fitur Filter (Nama Gedung)
+        if ($request->filled('gedung')) {
+            $query->where('building_name', $request->gedung);
+        }
+
+        // --- [PERBAIKAN: PAGINATION DINAMIS] ---
+        // Default 9 agar sesuai grid 3 kolom, tapi bisa berubah sesuai request user
+        $perPage = $request->input('per_page', 9);
+        
+        // Ambil data ruangan dengan pagination dinamis
+        $rooms = $query->latest()->paginate($perPage)->withQueryString();
+        // ---------------------------------------
+
+        // Ambil daftar gedung unik untuk dropdown filter
+        $buildings = Lab::select('building_name')
+                        ->distinct()
+                        ->orderBy('building_name')
+                        ->pluck('building_name');
+
+        // Ambil semua koordinat ruangan untuk ditampilkan di Peta Besar (Map Dashboard)
+        $mapLocations = Lab::whereNotNull('latitude')
+                           ->whereNotNull('longitude')
+                           ->get(['id', 'name', 'building_name', 'latitude', 'longitude']);
+
+        return view('rooms.index', compact('rooms', 'buildings', 'mapLocations'));
     }
 
     public function create(Lab $lab)

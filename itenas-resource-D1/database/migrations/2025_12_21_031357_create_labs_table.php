@@ -10,13 +10,22 @@ return new class extends Migration
     {
         Schema::create('labs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('prodi_id')->constrained('prodis')->onDelete('cascade'); // Relasi ke Prodi
-            $table->string('name'); // Nama Lab
-            $table->string('building_name'); // Gedung 14, dll
+            
+            // 1. Ubah jadi nullable() agar Seeder Ruangan Umum tidak error
+            $table->foreignId('prodi_id')->nullable()->constrained('prodis')->onDelete('cascade'); 
+            
+            $table->string('name');
+            $table->string('building_name')->nullable();
             $table->string('room_number')->nullable();
             $table->integer('capacity')->default(30);
-            $table->decimal('latitude', 10, 8)->nullable(); // Untuk API Maps
-            $table->decimal('longitude', 11, 8)->nullable(); // Untuk API Maps
+            
+            // 2. INI YANG SEBELUMNYA KURANG (Penyebab Error Seeder)
+            $table->string('status')->default('available'); 
+
+            // 3. Koordinat (Gunakan string agar aman saat import data seeder)
+            $table->string('latitude')->nullable();
+            $table->string('longitude')->nullable();
+            
             $table->text('description')->nullable();
             $table->timestamps();
         });

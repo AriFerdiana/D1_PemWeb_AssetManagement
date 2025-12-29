@@ -15,7 +15,7 @@ class AdminAssetController extends Controller
 {
     $user = Auth::user();
     
-    // 1. AMBIL DATA KATEGORI (Solusi untuk Error Anda)
+    // 1. AMBIL DATA KATEGORI
     $categories = Category::all(); 
 
     // 2. QUERY DASAR ASET
@@ -42,8 +42,18 @@ class AdminAssetController extends Controller
         $query->where('category_id', $request->category_id);
     }
 
-    // 6. AMBIL DATA DENGAN PAGINATION
-    $assets = $query->latest()->paginate(10)->withQueryString();
+    // --- [BAGIAN INI YANG DIUBAH/DITAMBAHKAN] ---
+    
+    // 6. AMBIL DATA DENGAN PAGINATION DINAMIS
+    // Tangkap input 'per_page' dari view, jika kosong set default 10
+    $perPage = $request->input('per_page', 10);
+
+    // Gunakan variabel $perPage di dalam paginate()
+    $assets = $query->latest()
+                    ->paginate($perPage) 
+                    ->withQueryString(); // Agar filter tidak hilang saat ganti halaman
+
+    // ---------------------------------------------
 
     // 7. KIRIM VARIABEL KE VIEW
     return view('admin.assets.index', compact('assets', 'categories'));
