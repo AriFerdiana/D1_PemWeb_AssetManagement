@@ -4,7 +4,7 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         <div class="mb-8">
-            <h1 class="text-3xl font-bold text-navy-800 dark:text-white">Pengajuan Peminjaman Aset</h1>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Pengajuan Peminjaman Aset</h1>
             <p class="text-gray-600 dark:text-gray-300 mt-1">
                 Halo, <span class="font-semibold text-teal-600">{{ Auth::user()->name }}</span>. Silakan lengkapi formulir di bawah ini.
             </p>
@@ -39,7 +39,7 @@
                     
                     {{-- CARD 1: WAKTU & TUJUAN --}}
                     <div class="bg-white rounded-xl shadow-card p-6 border border-gray-100">
-                        <h3 class="text-lg font-bold text-navy-800 mb-4 pb-2 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">
                             <i class="fas fa-calendar-alt mr-2 text-teal-600"></i> Detail Waktu
                         </h3>
 
@@ -66,7 +66,7 @@
 
                     {{-- CARD 2: UPLOAD --}}
                     <div class="bg-white rounded-xl shadow-card p-6 border border-gray-100">
-                        <h3 class="text-lg font-bold text-navy-800 mb-4 pb-2 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">
                             <i class="fas fa-file-upload mr-2 text-teal-600"></i> Dokumen Pendukung (Opsional)
                         </h3>
                         
@@ -88,7 +88,7 @@
                 {{-- KOLOM KANAN: BARANG DIPILIH --}}
                 <div class="lg:col-span-1">
                     <div class="bg-white rounded-xl shadow-card p-6 border border-gray-100 sticky top-24">
-                        <h3 class="text-lg font-bold text-navy-800 mb-4 pb-2 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">
                             <i class="fas fa-shopping-cart mr-2 text-teal-600"></i> Barang Dipilih
                         </h3>
 
@@ -100,15 +100,16 @@
                                     <label class="text-xs font-bold text-gray-500 uppercase">Nama Aset (Utama)</label>
                                     {{-- Hidden input agar ID terkirim --}}
                                     <input type="hidden" name="items[0][asset_id]" value="{{ $asset->id }}">
-                                    <p class="font-bold text-navy-800 text-lg mt-1">{{ $asset->name }}</p>
+                                    <p class="font-bold text-gray-800 text-lg mt-1">{{ $asset->name }}</p>
                                     <p class="text-xs text-gray-500">Kode: {{ $asset->code }}</p>
                                 </div>
                                 
                                 <div>
                                     <label class="text-xs font-bold text-gray-500 uppercase">Jumlah</label>
-                                    <input type="number" name="items[0][quantity]" value="1" min="1" max="{{ $asset->stock }}" 
+                                    {{-- PERBAIKAN: Ganti stock jadi quantity --}}
+                                    <input type="number" name="items[0][quantity]" value="1" min="1" max="{{ $asset->quantity }}" 
                                         class="w-full mt-1 px-3 py-2 border border-gray-300 rounded text-sm focus:ring-teal-500 bg-white">
-                                    <p class="text-[10px] text-gray-500 mt-1">Stok tersedia: <b>{{ $asset->stock }}</b></p>
+                                    <p class="text-[10px] text-gray-500 mt-1">Stok tersedia: <b>{{ $asset->quantity }}</b></p>
                                 </div>
                             </div>
 
@@ -119,7 +120,8 @@
                         </button>
 
                         <div class="space-y-3">
-                            <button type="submit" class="w-full py-3 bg-navy-700 hover:bg-navy-800 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5">
+                            {{-- PERBAIKAN WARNA TOMBOL: Ganti bg-navy-700 jadi bg-blue-600 --}}
+                            <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5">
                                 Ajukan Peminjaman
                             </button>
                             <a href="{{ route('reservations.assets') }}" class="block w-full py-3 text-center border border-gray-300 text-gray-600 font-bold rounded-lg hover:bg-gray-50 transition">
@@ -146,7 +148,8 @@
                     <option value="" disabled selected>-- Cari Aset --</option>
                     @foreach($allAssets as $a)
                         @if($a->id != $asset->id) {{-- Jangan tampilkan aset utama lagi --}}
-                            <option value="{{ $a->id }}">{{ $a->name }} (Sisa: {{ $a->stock }})</option>
+                            {{-- PERBAIKAN: Ganti stock jadi quantity --}}
+                            <option value="{{ $a->id }}">{{ $a->name }} (Sisa: {{ $a->quantity }})</option>
                         @endif
                     @endforeach
                 </select>

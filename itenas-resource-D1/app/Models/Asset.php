@@ -14,8 +14,8 @@ class Asset extends Model
         'name',
         'code',
         'category_id',
-        'lab_id', // Ini kunci utama untuk tahu aset ini milik prodi mana
-        'stock',
+        'lab_id',
+        'quantity', // <--- UBAH DARI 'stock' KE 'quantity'
         'image',
         'status',
         'description'

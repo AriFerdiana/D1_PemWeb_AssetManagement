@@ -20,48 +20,51 @@ class AssetController extends Controller
      * Mahasiswa -> Lihat Katalog (Peminjaman)
      */
     public function index(Request $request)
-{
-    $user = Auth::user();
-    $categories = Category::all(); 
+    {
+        $user = Auth::user();
+        $categories = Category::all(); 
 
-    // 1. Query Dasar
-    $query = Asset::with(['category', 'lab']);
+        // 1. Query Dasar
+        $query = Asset::with(['category', 'lab']);
 
-    // 2. LOGIKA FILTER PRODI UNTUK ADMIN/LABORAN (TAMBAHKAN INI)
-    if ($user->hasRole(['Superadmin', 'Laboran'])) {
-        if ($user->hasRole('Laboran')) {
-            $query->whereHas('lab', function($q) use ($user) {
-                $q->where('prodi_id', $user->prodi_id);
-            });
+        // 2. LOGIKA FILTER PRODI UNTUK ADMIN/LABORAN
+        if ($user->hasRole(['Superadmin', 'Laboran'])) {
+            if ($user->hasRole('Laboran')) {
+                $query->whereHas('lab', function($q) use ($user) {
+                    $q->where('prodi_id', $user->prodi_id);
+                });
+            }
+        } else {
+            // Mahasiswa hanya melihat aset yang statusnya 'available' DAN stok > 0
+            $query->where('status', 'available')
+                  ->where('quantity', '>', 0); // <--- PERBAIKAN: Gunakan quantity, bukan stock
         }
-    } else {
-        // Mahasiswa hanya melihat aset yang statusnya 'available'
-        $query->where('status', 'available'); 
-    }
 
-    // 3. Filter Search
-    $query->when($request->filled('search'), function ($q) use ($request) {
-        $search = $request->search;
-        $q->where(function ($subQ) use ($search) {
-            $subQ->where('name', 'like', '%' . $search . '%')
-                 ->orWhere('code', 'like', '%' . $search . '%');
+        // 3. Filter Search
+        $query->when($request->filled('search'), function ($q) use ($request) {
+            $search = $request->search;
+            $q->where(function ($subQ) use ($search) {
+                $subQ->where('name', 'like', '%' . $search . '%')
+                     ->orWhere('code', 'like', '%' . $search . '%');
+            });
         });
-    });
 
-    // 4. Filter Kategori
-    $query->when($request->filled('category_id'), function ($q) use ($request) {
-        $q->where('category_id', $request->category_id);
-    });
+        // 4. Filter Kategori
+        $query->when($request->filled('category_id'), function ($q) use ($request) {
+            $q->where('category_id', $request->category_id);
+        });
 
-    $assets = $query->latest()->paginate(10)->withQueryString();
+        // 5. Pagination Dinamis (Agar dropdown 10,20,50 berfungsi)
+        $perPage = $request->input('per_page', 10);
+        $assets = $query->latest()->paginate($perPage)->withQueryString();
 
-    // 5. LOGIKA PEMISAH TAMPILAN
-    if ($user->hasRole(['Superadmin', 'Laboran'])) {
-        return view('admin.assets.index', compact('assets', 'categories'));
-    } else {
-        return view('assets.catalog', compact('assets', 'categories'));
+        // 6. LOGIKA PEMISAH TAMPILAN
+        if ($user->hasRole(['Superadmin', 'Laboran'])) {
+            return view('admin.assets.index', compact('assets', 'categories'));
+        } else {
+            return view('assets.catalog', compact('assets', 'categories'));
+        }
     }
-}
 
     public function create()
     {
@@ -77,7 +80,7 @@ class AssetController extends Controller
             'code'        => 'required|unique:assets,code',
             'category_id' => 'required|exists:categories,id',
             'lab_id'      => 'required|exists:labs,id',
-            'stock'       => 'required|integer|min:0',
+            'quantity'    => 'required|integer|min:0', // <--- UBAH 'stock' JADI 'quantity'
             'image'       => 'nullable|image|mimes:jpeg,png,jpg|max:2048', 
             'prodi'       => 'required|string'
         ]);
@@ -117,7 +120,7 @@ class AssetController extends Controller
             'code'        => 'required|unique:assets,code,' . $asset->id,
             'category_id' => 'required|exists:categories,id',
             'lab_id'      => 'required|exists:labs,id',
-            'stock'       => 'required|integer|min:0',
+            'quantity'    => 'required|integer|min:0', // <--- UBAH 'stock' JADI 'quantity'
             'image'       => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'prodi'       => 'required|string'
         ]);

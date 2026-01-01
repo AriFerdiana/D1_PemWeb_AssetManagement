@@ -60,9 +60,9 @@ class ReservationController extends Controller
     {
         $asset = Asset::with('lab.prodi')->findOrFail($asset_id);
         
-        // Mengambil aset lain yang tersedia jika mahasiswa ingin meminjam lebih dari 1 barang sekaligus
+        // [FIX] Mengambil aset lain yang tersedia (Gunakan 'quantity' bukan 'stock')
         $allAssets = Asset::where('status', 'available')
-            ->where('stock', '>', 0)
+            ->where('quantity', '>', 0) // <--- PERBAIKAN DI SINI
             ->get(); 
         
         return view('reservations.create', compact('asset', 'allAssets'));
@@ -96,8 +96,10 @@ class ReservationController extends Controller
         // C. Cek Stok Aset sebelum simpan
         foreach ($request->items as $item) {
             $asset = Asset::findOrFail($item['asset_id']);
-            if ($item['quantity'] > $asset->stock) {
-                return back()->withErrors(['error' => "Stok aset '{$asset->name}' tidak mencukupi! Sisa stok saat ini: {$asset->stock}"])->withInput();
+            
+            // [FIX] Perbaikan nama kolom 'stock' menjadi 'quantity'
+            if ($item['quantity'] > $asset->quantity) { // <--- PERBAIKAN DI SINI
+                return back()->withErrors(['error' => "Stok aset '{$asset->name}' tidak mencukupi! Sisa stok saat ini: {$asset->quantity}"])->withInput();
             }
         }
 

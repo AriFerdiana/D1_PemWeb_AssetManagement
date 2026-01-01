@@ -9,7 +9,7 @@
             {{-- Form dengan method GET --}}
             <form method="GET" action="{{ route('assets.index') }}" class="flex-1 flex flex-col md:flex-row gap-2 w-full">
                 
-                {{-- [PERBAIKAN 1: Dropdown Jumlah Baris (10, 20, dst)] --}}
+                {{-- Dropdown Jumlah Baris (10, 20, dst) --}}
                 <select name="per_page" onchange="this.form.submit()" class="rounded-lg border-gray-300 focus:ring-orange-500 focus:border-orange-500 w-full md:w-28 text-center font-bold bg-gray-50 cursor-pointer" title="Jumlah Data">
                     <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10 Data</option>
                     <option value="20" {{ request('per_page') == 20 ? 'selected' : '' }}>20 Data</option>
@@ -46,11 +46,10 @@
         {{-- Grid Katalog Aset --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             @forelse($assets as $asset)
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group flex flex-col">
                     
                     {{-- Gambar Aset --}}
                     <div class="h-48 bg-gray-100 relative overflow-hidden flex items-center justify-center">
-                        {{-- [PERBAIKAN 2: Logika Gambar] --}}
                         @if(filter_var($asset->image, FILTER_VALIDATE_URL))
                             {{-- Jika Link URL --}}
                             <img src="{{ $asset->image }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
@@ -64,27 +63,26 @@
                         @endif
                         
                         {{-- Badge Stok --}}
-                        <div class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow">
-                            {{-- [PERBAIKAN 3: Ganti stock jadi quantity] --}}
+                        <div class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow text-gray-800">
                             Stok: {{ $asset->quantity }}
                         </div>
                     </div>
 
                     {{-- Info Aset --}}
-                    <div class="p-4">
+                    <div class="p-4 flex flex-col flex-grow">
                         <p class="text-xs text-orange-600 font-bold uppercase mb-1">{{ $asset->category->name ?? 'Umum' }}</p>
-                        <h3 class="font-bold text-gray-800 text-lg truncate" title="{{ $asset->name }}">{{ $asset->name }}</h3>
-                        <p class="text-sm text-gray-500 mt-1"><i class="fas fa-map-marker-alt mr-1"></i> {{ $asset->lab->name ?? '-' }}</p>
+                        <h3 class="font-bold text-gray-800 text-lg leading-tight mb-1" title="{{ $asset->name }}">{{ $asset->name }}</h3>
+                        <p class="text-sm text-gray-500 mb-4"><i class="fas fa-map-marker-alt mr-1"></i> {{ $asset->lab->name ?? '-' }}</p>
                         
-                        {{-- Tombol Pinjam --}}
-                        <div class="mt-4 pt-4 border-t border-gray-100">
-                            {{-- [PERBAIKAN 4: Logika Tombol pakai quantity] --}}
+                        {{-- Tombol Pinjam (POSISI DI BAWAH) --}}
+                        <div class="mt-auto pt-4 border-t border-gray-100">
                             @if($asset->quantity > 0)
-                                <a href="{{ route('reservations.create', ['asset' => $asset->id]) }}" class="block w-full bg-navy-700 text-white text-center py-2 rounded-lg font-bold hover:bg-navy-800 transition">
+                                {{-- [PERBAIKAN WARNA DI SINI: Ganti bg-navy-700 jadi bg-blue-600] --}}
+                                <a href="{{ route('reservations.create', ['asset' => $asset->id]) }}" class="block w-full bg-blue-600 text-white text-center py-2.5 rounded-lg font-bold hover:bg-blue-700 transition shadow-sm">
                                     Ajukan Peminjaman
                                 </a>
                             @else
-                                <button disabled class="block w-full bg-gray-200 text-gray-400 text-center py-2 rounded-lg font-bold cursor-not-allowed">
+                                <button disabled class="block w-full bg-gray-200 text-gray-400 text-center py-2.5 rounded-lg font-bold cursor-not-allowed">
                                     Stok Habis
                                 </button>
                             @endif

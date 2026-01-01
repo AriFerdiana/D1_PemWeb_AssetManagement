@@ -18,16 +18,20 @@
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
     <div class="ticket-container max-w-md w-full bg-white rounded-xl shadow-2xl overflow-hidden relative border border-gray-200">
+        
         {{-- WATERMARK STATUS --}}
         <div class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.03]">
             <span class="text-8xl font-black text-gray-900 transform -rotate-45 uppercase">{{ $reservation->status }}</span>
         </div>
 
+        {{-- HEADER TIKET --}}
         <div class="bg-blue-900 p-6 text-white text-center relative z-10 border-b-4 border-yellow-400">
             <h1 class="text-2xl font-black tracking-widest uppercase">E-TICKET</h1>
             <p class="text-[10px] opacity-80 tracking-widest uppercase mt-1">ITENAS RESOURCE CENTER</p>
+            
+            {{-- LOGO ITENAS DI POJOK KANAN --}}
             <div class="absolute top-4 right-4">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Logo_Itenas.png/1200px-Logo_Itenas.png" alt="Logo" class="h-8 bg-white rounded-full p-1 shadow-sm">
+                <img src="https://uat-web.itenas.ac.id/assets/images/logo-7.png" alt="Logo Itenas" class="h-10 bg-white rounded-lg p-1 shadow-sm object-contain">
             </div>
         </div>
 
@@ -35,7 +39,6 @@
             {{-- QR CODE AREA --}}
             <div class="flex flex-col items-center justify-center mb-6">
                 <div class="p-3 bg-white border-4 border-double border-blue-900 rounded-2xl shadow-inner">
-                    {{-- Pastikan library simple-qrcode sudah terinstal --}}
                     {!! QrCode::size(160)->margin(1)->color(30, 58, 138)->generate($reservation->transaction_code) !!}
                 </div>
                 <div class="mt-3 text-center">
