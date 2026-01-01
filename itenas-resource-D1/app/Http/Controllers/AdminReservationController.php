@@ -118,7 +118,7 @@ class AdminReservationController extends Controller
             // Hitung Denda jika terlambat
             if ($now->gt($endTime)) {
                 $daysLate = $now->diffInDays($endTime) ?: 1;
-                $reservation->penalty = $daysLate * 50000; // Contoh denda 50rb/hari
+                $reservation->penalty = $daysLate * 5000; // Contoh denda 5rb/hari
                 $reservation->payment_status = 'unpaid';
                 $reservation->penalty_status = 'unpaid';
             }

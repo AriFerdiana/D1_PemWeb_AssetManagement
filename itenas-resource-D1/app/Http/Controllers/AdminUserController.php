@@ -115,43 +115,51 @@ class AdminUserController extends Controller
     /**
      * Update User
      */
-    public function update(Request $request, User $user)
+    public function update(Request $request, $id) // Ubah parameter jadi $id biar aman
     {
+        $user = User::findOrFail($id); // Cari user manual biar pasti ketemu
+
+        // 1. VALIDASI LENGKAP (Termasuk NIM & Phone)
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            // Ignore email milik user ini sendiri saat cek unique
-            'email' => ['required', 'email', 'unique:users,email,'.$user->id],
-            'role' => ['required'],
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'email', 'unique:users,email,'.$user->id],
+            'nim'      => ['nullable', 'string', 'max:20'], // <--- PENTING: Validasi NIM
+            'role'     => ['required'],
             'prodi_id' => ['nullable', 'exists:prodis,id'],
+            'phone'    => ['nullable', 'string', 'max:15'], // Tambahan
+            'address'  => ['nullable', 'string'],           // Tambahan
         ]);
 
-        // 1. Update Data Dasar
-        $user->name = $request->name;
-        $user->email = $request->email;
+        // 2. UPDATE DATA DASAR
+        $user->name     = $request->name;
+        $user->email    = $request->email;
+        $user->nim      = $request->nim;      // <--- PENTING: Simpan NIM
+        $user->phone    = $request->phone;    // <--- Simpan No HP
+        $user->address  = $request->address;  // <--- Simpan Alamat
 
-        // 2. Logika Prodi (PENTING)
-        // Jika role yang dipilih adalah Superadmin, hapus prodinya (karena superadmin lintas prodi)
-        // Jika Laboran/Mahasiswa, simpan prodi yang dipilih
+        // 3. LOGIKA PRODI
+        // Jika Superadmin, set null. Jika tidak, set sesuai input.
         if ($request->role === 'Superadmin') {
             $user->prodi_id = null;
         } else {
             $user->prodi_id = $request->prodi_id;
         }
 
-        // 3. Update Password (Hanya jika diisi)
+        // 4. UPDATE PASSWORD (Opsional)
         if ($request->filled('password')) {
             $request->validate([
-                'password' => ['confirmed', Rules\Password::defaults()],
+                'password' => ['confirmed', \Illuminate\Validation\Rules\Password::defaults()],
             ]);
             $user->password = Hash::make($request->password);
         }
 
+        // 5. SIMPAN KE DATABASE
         $user->save();
 
-        // 4. Sync Role (Ganti role lama dengan yang baru)
+        // 6. SYNC ROLE
         $user->syncRoles([$request->role]);
 
-        return redirect()->route('admin.users.index')->with('success', 'Data user berhasil diperbarui');
+        return redirect()->route('admin.users.index')->with('success', 'Data user berhasil diperbarui!');
     }
 
     /**
