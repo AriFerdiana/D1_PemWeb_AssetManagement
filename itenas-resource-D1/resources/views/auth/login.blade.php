@@ -12,7 +12,9 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: { itenas: { orange: '#E65100', navy: '#1E1B4B', softNavy: '#312E81' } },
+                    colors: {
+                        itenas: { orange: '#E65100', navy: '#1E1B4B', softNavy: '#312E81' }
+                    },
                     fontFamily: { sans: ['Poppins', 'sans-serif'] }
                 }
             }
@@ -38,6 +40,7 @@
 
     <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative bg-white overflow-hidden">
         <div class="absolute inset-0 bg-pattern z-0"></div>
+        
         <a href="{{ url('/') }}" class="absolute top-8 left-8 flex items-center text-sm font-bold text-gray-500 hover:text-itenas-navy z-20 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm">
             <i class="fas fa-arrow-left mr-2"></i> Kembali ke Beranda
         </a>
@@ -91,18 +94,24 @@
                 </div>
                 
                 <div class="flex gap-4">
-                    <button type="button" class="flex-1 py-2.5 border border-gray-300 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition">
-                        <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="h-5 w-5" alt="Google">
-                        <span class="text-sm font-bold text-gray-600">Google</span>
-                    </button>
-                    <button type="button" class="flex-1 py-2.5 border border-gray-300 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition text-gray-800">
-                        <i class="fab fa-github text-xl"></i>
-                        <span class="text-sm font-bold">GitHub</span>
-                    </button>
-                </div>
+    {{-- TOMBOL GOOGLE --}}
+    {{-- Ganti button jadi a href, arahkan ke url auth/google --}}
+    <a href="{{ url('/auth/google') }}" class="flex-1 py-2.5 border border-gray-300 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition cursor-pointer">
+        <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="h-5 w-5" alt="Google">
+        <span class="text-sm font-bold text-gray-600">Google</span>
+    </a>
+
+    {{-- TOMBOL GITHUB --}}
+    {{-- Ganti button jadi a href, arahkan ke url auth/github --}}
+    <a href="{{ url('/auth/github') }}" class="flex-1 py-2.5 border border-gray-300 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition text-gray-800 cursor-pointer">
+        <i class="fab fa-github text-xl"></i>
+        <span class="text-sm font-bold">GitHub</span>
+    </a>
+</div>
 
                 <p class="mt-2 text-center text-sm text-gray-600">
-                    Belum punya akun? <a href="{{ route('register') }}" class="font-bold text-itenas-orange hover:text-orange-700">Daftar di sini</a>
+                    Belum punya akun? 
+                    <a href="{{ route('register') }}" class="font-bold text-itenas-orange hover:text-orange-700">Daftar di sini</a>
                 </p>
             </form>
         </div>
